@@ -15,9 +15,9 @@ After the intent answer, inspect only the context required by that route:
 
 Do not describe the home directory as a project. Do not scan or summarize unrelated sibling directories as though they are one repository. Do not list local candidates until the learner has chosen an intent that needs local material. If that intent needs a source, then inspect the workspace and offer candidate paths; do not silently choose one.
 
-Use user-facing language. Never mention internal helper names, internal routing phases, legacy state-directory names, or internal initializer wording. Start by asking what the learner wants to accomplish, not where the project comes from. Do not inspect the repository to decide this first question. For a broad workspace, say:
+Use user-facing language. Never mention internal helper names, internal routing phases, legacy state-directory names, or internal initializer wording. Start by asking what the learner wants to accomplish, not where the project comes from. Do not inspect the repository or describe the workspace before this first question. For the first intent turn, say only:
 
-> I’m not going to treat this folder as the project. What would you like to accomplish first?
+> What would you like to accomplish first?
 
 Offer these intent options:
 
