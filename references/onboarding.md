@@ -14,9 +14,17 @@ The agent should first inspect only the current workspace context:
 
 Do not describe the home directory as a project. Do not scan or summarize unrelated sibling directories as though they are one repository. If the current location is broad, ask the learner what they want to work on before choosing a project. If obvious local candidates exist, include their names as options; do not silently choose one.
 
-Use user-facing language. Never mention internal helper names, internal routing phases, legacy state-directory names, or internal initializer wording. Say:
+Use user-facing language. Never mention internal helper names, internal routing phases, legacy state-directory names, or internal initializer wording. Start by asking what the learner wants to accomplish, not where the project comes from. For a broad workspace, say:
 
-> I’m not going to treat this folder as the project. I can work with an existing local project, find a public project, start a new project, or give you a read-only preview. Which direction should we take?
+> I’m not going to treat this folder as the project. What would you like to accomplish first?
+
+Offer these intent options:
+
+- **Understand an existing project** — trace a local or later-selected codebase.
+- **Rebuild a real project or feature** — create a staged apprenticeship rather than a generic tutorial.
+- **Find a public project to build** — search repository metadata and show a shortlist before any clone or fork.
+- **Start a new project** — choose a meaningful project idea and create a guided build plan.
+- **Preview a workspace** — inspect without saving a learning workspace.
 
 If a specific project path is already provided, announce:
 
@@ -43,10 +51,10 @@ Use this order, with conditional branches:
 
 | Order | Question | Ask when |
 | ---: | --- | --- |
-| 1 | What would you like to achieve first? | Always when the request is broad or the learner has not stated a goal. |
-| 2 | Which project or project type should we use? | No selected local project, or the goal is discovery/new work. |
-| 3 | Where should we focus first? | After project/goal is known. |
-| 4 | How much time should the first stage fit into? | Before creating a staged blueprint. |
+| 1 | What would you like to accomplish first? | Always when the request is broad or the learner has not stated a goal. |
+| 2 | Which project or project type should we use? | Only when the chosen goal needs a source and one is not already selected. |
+| 3 | Where should we focus first? | After the goal and source or project type are known. |
+| 4 | How much time should the first stage fit into? | Before creating a staged blueprint or rebuild slice. |
 | 5 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
 | 6 | How should Upstack guide you? | Before choosing scaffold and reveal depth. |
 | 7 | Should I save this plan in `.upstack/`? | After the draft inventory and first blueprint summary are shown. |
@@ -59,22 +67,15 @@ Do not ask for a target role unless the learner chooses role matching, mentions 
 
 First ask:
 
-> What would you like to achieve first?
+> What would you like to accomplish first?
 
-Options:
-
-- **Choose a local project** — select a folder already on this machine.
-- **Discover a public project** — search repository metadata and show a shortlist before any clone or fork.
-- **Start a new project** — choose a project idea and create a guided build plan.
-- **Preview this folder** — inspect without saving a learning workspace.
-
-After “Choose a local project,” ask which folder. After “Discover,” ask what kind of project. After “Start new,” ask what project shape. After “Preview,” inspect read-only and do not ask skill questions until the learner chooses to continue.
+Offer the intent options above. After “Understand an existing project” or “Rebuild a real project or feature,” ask which local project or source to use. After “Find a public project to build,” ask what kind of project to search for. After “Start a new project,” ask what project shape. After “Preview a workspace,” inspect read-only and do not ask skill questions until the learner chooses to continue.
 
 ### Known local repository
 
 First ask:
 
-> What do you want to achieve with this project?
+> What would you like to accomplish first?
 
 Options:
 

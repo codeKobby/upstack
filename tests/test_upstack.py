@@ -155,7 +155,16 @@ class OnboardingTests(unittest.TestCase):
             self.assertEqual(report["local_candidates"][0]["name"], "sample-app")
             first = module.next_question(report, {})
             self.assertEqual(first["id"], "goal")
-            self.assertIn("Choose a local project", [item["label"] for item in first["options"]])
+            self.assertEqual(first["text"], "What would you like to accomplish first?")
+            self.assertIn("Find a public project to build", [item["label"] for item in first["options"]])
+            self.assertIn("Understand an existing project", [item["label"] for item in first["options"]])
+
+    def test_intent_is_asked_before_source_selection(self):
+        module = load_module("upstack_onboarding_intent_first", ROOT / "scripts" / "onboarding.py")
+        report = module.context(Path.home())
+        first = module.next_question(report, {})
+        self.assertEqual(first["id"], "goal")
+        self.assertEqual(module.next_question(report, {"goal": "rebuild"})["id"], "source")
 
     def test_question_sequence_adapts_to_discovery_answers(self):
         module = load_module("upstack_onboarding_sequence", ROOT / "scripts" / "onboarding.py")
@@ -181,4 +190,4 @@ class OnboardingTests(unittest.TestCase):
             report = module.context(project)
             first = module.next_question(report, {})
             self.assertEqual(first["id"], "goal")
-            self.assertIn("What do you want to achieve", first["text"])
+            self.assertEqual(first["text"], "What would you like to accomplish first?")

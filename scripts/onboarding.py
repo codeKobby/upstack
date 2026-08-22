@@ -103,37 +103,36 @@ def next_question(ctx: dict[str, Any], answers: dict[str, Any]) -> dict[str, Any
     source = str(answers.get("source", "")).lower()
     focus = str(answers.get("focus", "")).lower()
     if not answers.get("goal"):
-        if not ctx.get("is_project_context"):
-            candidates = ctx.get("local_candidates") or []
-            description = "There is no selected project in this workspace yet. Choose the starting point; I will inspect it before creating any learning state."
-            if candidates:
-                names = ", ".join(item["name"] for item in candidates[:5])
-                description += f" I found possible local projects: {names}."
-            return question(
-                "goal",
-                "What would you like to work on first?",
-                [
-                    option("Choose a local project", "Select a folder already on this machine.", "local"),
-                    option("Discover a public project", "Search public repository metadata and show a shortlist before any clone or fork.", "discover"),
-                    option("Start a new project", "Choose a project idea and create a guided build plan without selecting a repository yet.", "new"),
-                    option("Preview this folder", "Inspect a folder without creating persistent Upstack state.", "preview"),
-                ],
-                why=description,
-                allow_freeform=True,
-            )
-        return question(
-            "goal",
-            "What do you want to achieve with this project?",
-            [
+        if ctx.get("is_project_context"):
+            options = [
                 option("Understand the existing code", "Trace the architecture and one or more real flows.", "understand"),
                 option("Rebuild a feature", "Recreate a focused slice without copying the implementation.", "rebuild"),
                 option("Build a similar project", "Use this project as a reference for a staged rebuild.", "apprentice"),
                 option("Map the stack and concepts", "Create an ingredients report before choosing a build or study path.", "inventory"),
-            ],
-            why="Your goal determines whether Upstack should emphasize tracing, rebuilding, or inventory first.",
+                option("Find a different public project", "Search for a project that better matches a goal or portfolio direction.", "discover"),
+            ]
+            why = "I found a project in the current workspace. Your goal comes first; I will choose the smallest useful source and learning path after you answer."
+        else:
+            options = [
+                option("Understand an existing project", "Trace a local codebase or a project you will select next.", "understand"),
+                option("Rebuild a real project or feature", "Create a staged apprenticeship instead of a generic tutorial.", "rebuild"),
+                option("Find a public project to build", "Search repository metadata and show a shortlist before any clone or fork.", "discover"),
+                option("Start a new project", "Choose a meaningful project idea and create a guided build plan.", "new"),
+                option("Preview a workspace", "Inspect a folder without creating persistent Upstack state.", "preview"),
+            ]
+            why = "This workspace is broad, so I will identify your intended outcome before asking which project or source to use."
+            candidates = ctx.get("local_candidates") or []
+            if candidates:
+                names = ", ".join(item["name"] for item in candidates[:5])
+                why += f" Possible local projects include: {names}."
+        return question(
+            "goal",
+            "What would you like to accomplish first?",
+            options,
+            why=why,
             allow_freeform=True,
         )
-    if goal in {"local", "preview"} and not answers.get("source"):
+    if goal in {"understand", "rebuild", "apprentice", "inventory", "preview"} and not ctx.get("is_project_context") and not answers.get("source"):
         return question(
             "source",
             "Which local project should I inspect?",
@@ -142,7 +141,7 @@ def next_question(ctx: dict[str, Any], answers: dict[str, Any]) -> dict[str, Any
                 *[option(item["name"], item["path"], item["path"]) for item in (ctx.get("local_candidates") or [])[:6]],
                 option("I will provide a path", "Use a different local folder.", "custom"),
             ],
-            why="The current workspace is not a selected project, so I need a concrete folder before reading its files.",
+            why="You chose to learn from an existing local codebase, so I need a concrete folder before reading its files.",
             allow_freeform=True,
         )
     if goal == "discover" and not answers.get("source"):

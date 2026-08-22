@@ -59,11 +59,11 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 
 ## Smooth first run
 
-When you run `/upstack` from a home directory or broad workspace, Upstack does not treat that folder as your project and does not silently pick one of its children. It begins with a simple question such as:
+When you run `/upstack` from a home directory or broad workspace, Upstack does not treat that folder as your project and does not silently pick one of its children. It begins with the learner’s intended outcome:
 
-> What would you like to work on first?
+> What would you like to accomplish first?
 
-It can then help you choose an existing local project, discover a public project, start a new project, or preview the current folder. After that answer, it asks only the next question that changes the plan. For a known project, the first question is about your goal; for public discovery, it asks what kind of project to search for; for a rebuild, it asks for the first focus area and time budget before calibrating relevant technologies.
+It offers choices such as understanding an existing project, rebuilding a real project or feature, finding a public project to build, starting something new, or previewing the workspace. Only after the chosen intent needs a source does it ask whether to use a local project or public discovery. After each answer, it asks only the next question that changes the plan. For a known project, the first question is still about the learner’s goal; for public discovery, it asks what kind of project to search for; for a rebuild, it asks for focus and time before calibrating relevant technologies.
 
 The agent should use a native question tool or selectable prompt when the host provides one. In text-only hosts, it shows the same choices as a short numbered list and does not claim that the list is clickable. Fork, clone, install, execution, and persistent state remain separate confirmations.
 

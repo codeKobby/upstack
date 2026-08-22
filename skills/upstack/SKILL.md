@@ -24,7 +24,9 @@ Ask **one question at a time**. Normalize the answer, then use it to choose the 
 
 For a broad workspace, say:
 
-> I’m not going to treat this folder as the project. I can help you choose an existing local project, discover a public project, start something new, or preview this folder without saving anything. Which direction should we take?
+> I’m not going to treat this folder as the project. What would you like to accomplish first?
+
+Offer intent choices such as **understand an existing project**, **rebuild a real project or feature**, **find a public project to build**, **start a new project**, or **preview a workspace**. Ask where the project comes from only after the learner chooses an intent that needs a source.
 
 For a known local project, say:
 
