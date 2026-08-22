@@ -32,14 +32,14 @@ Examples:
 /upstack build the frontend only
 ```
 
-Upstack announces what it will do, why that route fits, and what happens next. If `.forge/` is missing, it inspects the repository without running project code, asks about your skill profile and goals, shows the draft inventory, and asks before writing durable state.
+Upstack announces what it will do, why that route fits, and what happens next. If `.upstack/` is missing, it first checks whether the current folder is a real project or a broad workspace. It then asks one relevant question at a time, uses the host’s native question UI when available, adapts the next question to your answer, shows the draft inventory and first project direction, and asks before writing durable state.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
 | `/upstack` | Route a natural-language request to the right project-apprenticeship workflow. |
-| `/upstack init` | Inspect the workspace, interview the learner, and create confirmed `.forge/` state. |
+| `/upstack init` | Inspect the workspace, interview the learner, and create confirmed `.upstack/` state. |
 | `/upstack inventory` | Create the project “ingredients” report. |
 | `/upstack concepts` | Map technologies and concepts to real source files, symbols, tests, and flows. |
 | `/upstack focus` | Choose full-stack, frontend, backend, data, a feature, a file, a symbol, a test, or a request path. |
@@ -55,13 +55,24 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 | `/upstack portfolio` | Produce evidence-backed project and resume documentation. |
 | `/upstack status` | Show the current project, focus, stage, evidence, uncertainty, and next action. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
+| `/upstack onboarding` | Show the next relevant first-run question without writing project state. |
+
+## Smooth first run
+
+When you run `/upstack` from a home directory or broad workspace, Upstack does not treat that folder as your project and does not silently pick one of its children. It begins with a simple question such as:
+
+> What would you like to work on first?
+
+It can then help you choose an existing local project, discover a public project, start a new project, or preview the current folder. After that answer, it asks only the next question that changes the plan. For a known project, the first question is about your goal; for public discovery, it asks what kind of project to search for; for a rebuild, it asks for the first focus area and time budget before calibrating relevant technologies.
+
+The agent should use a native question tool or selectable prompt when the host provides one. In text-only hosts, it shows the same choices as a short numbered list and does not claim that the list is clickable. Fork, clone, install, execution, and persistent state remain separate confirmations.
 
 ## The ingredients and recipe
 
-A local initialization creates a learner-owned `.forge/` directory:
+A local initialization creates a learner-owned `.upstack/` directory:
 
 ```text
-.forge/
+.upstack/
 ├── CONFIG.md
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md
@@ -160,7 +171,7 @@ Upstack owns inventory, concept maps, architecture maps, focus, rebuild stages, 
                               /upstack portfolio
 ```
 
-Neither skill silently overwrites the other’s `.forge/` or `.learning/` state. Handoffs pass a compact context payload containing project target, source anchors, concept IDs, stage ID, acceptance checks, and provenance.
+Neither skill silently overwrites the other’s `.upstack/` or `.learning/` state. Handoffs pass a compact context payload containing project target, source anchors, concept IDs, stage ID, acceptance checks, and provenance.
 
 ## Local validation
 

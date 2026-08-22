@@ -138,3 +138,47 @@ class CapabilityTests(unittest.TestCase):
         self.assertTrue(report["github_cli"]["authenticated"])
         self.assertEqual(report["github_cli"]["account"], "learner")
         self.assertNotIn("secret-value", json.dumps(report))
+
+
+class OnboardingTests(unittest.TestCase):
+    def test_home_directory_is_not_treated_as_a_project(self):
+        module = load_module("upstack_onboarding", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            project = home / "sample-app"
+            project.mkdir()
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            with patch.object(module.Path, "home", return_value=home):
+                report = module.context(home)
+            self.assertTrue(report["is_home"])
+            self.assertFalse(report["is_project_context"])
+            self.assertEqual(report["local_candidates"][0]["name"], "sample-app")
+            first = module.next_question(report, {})
+            self.assertEqual(first["id"], "goal")
+            self.assertIn("Choose a local project", [item["label"] for item in first["options"]])
+
+    def test_question_sequence_adapts_to_discovery_answers(self):
+        module = load_module("upstack_onboarding_sequence", ROOT / "scripts" / "onboarding.py")
+        report = module.context(Path.cwd())
+        answers = {"goal": "discover"}
+        self.assertEqual(module.next_question(report, answers)["id"], "source")
+        answers["source"] = "frontend"
+        self.assertEqual(module.next_question(report, answers)["id"], "focus")
+        answers["focus"] = "frontend"
+        self.assertEqual(module.next_question(report, answers)["id"], "time_budget")
+        answers["time_budget"] = "1-2h"
+        self.assertEqual(module.next_question(report, answers)["id"], "skill_profile")
+        answers["skill_profile"] = "guided"
+        self.assertEqual(module.next_question(report, answers)["id"], "mode")
+        answers["mode"] = "coach"
+        self.assertIsNone(module.next_question(report, answers))
+
+    def test_known_project_skips_project_selection_question(self):
+        module = load_module("upstack_onboarding_known", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "pyproject.toml").write_text("[project]\nname='demo'\n", encoding="utf-8")
+            report = module.context(project)
+            first = module.next_question(report, {})
+            self.assertEqual(first["id"], "goal")
+            self.assertIn("What do you want to achieve", first["text"])

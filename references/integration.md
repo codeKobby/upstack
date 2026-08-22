@@ -36,7 +36,7 @@ I’ll search GitHub repository metadata first. Then I’ll read the README and 
 For local initialization:
 
 ```text
-I’ll inspect this repository without running its code, identify the stack and major flows, and show you the inventory. I’ll ask before writing `.forge/`.
+I’ll inspect this repository without running its code, identify the stack and major flows, and show you the inventory. I’ll ask before writing `.upstack/`.
 ```
 
 ## Side-effect boundaries
@@ -90,4 +90,4 @@ Pass a small context payload rather than copying the whole repository:
 }
 ```
 
-Upstack owns `.forge/`. Overflow owns `.learning/`. Each skill may read the other’s artifact links but must not silently rewrite the other directory.
+Upstack owns `.upstack/`. Overflow owns `.learning/`. Each skill may read the other’s artifact links but must not silently rewrite the other directory.

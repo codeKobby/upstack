@@ -1,7 +1,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.forge/
+.upstack/
 .DS_Store
 .env
 .env.*

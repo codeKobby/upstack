@@ -4,7 +4,7 @@ Upstack is a portable Agent Skills project-apprenticeship suite. It helps learne
 
 ## Route-first behavior
 
-For `/upstack`, classify and announce the route before acting. If `.forge/` is missing and the request needs durable project state, announce `/upstack init`, preserve the original request, and continue it after setup confirmation. Stateless inventory previews or explanations may continue without writing `.forge/`.
+For `/upstack`, inspect the current folder context, distinguish a selected project from a broad workspace, and announce the user-facing route before acting. If `.upstack/` is missing, ask one relevant question at a time through the host’s native question UI when available. Preserve the original request, show the draft inventory and first direction, and ask before writing `.upstack/`. Stateless previews or explanations may continue without writing `.upstack/`.
 
 ## Inventory and provenance
 
@@ -16,7 +16,7 @@ Use `scripts/discover_github.py` for metadata-first public repository discovery.
 
 ## Learner ownership
 
-Ask about skill vector, time, focus, target role, and safety boundaries. Generate one stage at a time. Do not provide a complete implementation or every future lesson by default. Use `/overflow` for source-cited lessons, quizzes, exercises, hints, assessments, review, and durable learning memory; keep `.learning/` and `.forge/` separate.
+Use `scripts/onboarding.py` and `references/onboarding.md` to ask one relevant question per turn in this order: goal, source or project type, focus, time budget, relevant skill confidence, then guidance mode. Skip questions already answered or irrelevant to the selected route. Generate one stage at a time. Do not provide a complete implementation or every future lesson by default. Use `/overflow` for source-cited lessons, quizzes, exercises, hints, assessments, review, and durable learning memory; keep `.learning/` and `.upstack/` separate.
 
 ## External actions
 

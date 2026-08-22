@@ -33,7 +33,7 @@ IGNORE_DIRS = {
     ".idea",
     ".vscode",
     ".learning",
-    ".forge",
+    ".upstack",
 }
 
 MANIFESTS = {

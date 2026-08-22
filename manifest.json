@@ -28,7 +28,7 @@
       "C": "bridge"
     }
   },
-  "state_directory": ".forge",
+  "state_directory": ".upstack",
   "integrations": {
     "github_cli": "optional-preferred-for-authenticated-actions",
     "github_rest": "optional-public-read-only-fallback",
