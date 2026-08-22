@@ -4,7 +4,7 @@ Upstack is a portable Agent Skills project-apprenticeship suite. It helps learne
 
 ## Route-first behavior
 
-For `/upstack`, inspect the current folder context, distinguish a selected project from a broad workspace, and announce the user-facing route before acting. If `.upstack/` is missing, ask one relevant question at a time through the host’s native question UI when available. Preserve the original request, show the draft inventory and first direction, and ask before writing `.upstack/`. Stateless previews or explanations may continue without writing `.upstack/`.
+For `/upstack`, begin with the learner’s intended outcome before inspecting the current folder, repository, files, stack, or home-directory contents. If the request does not state a clear outcome, ask one intent question through the host’s native question UI when available. Do not print a prose version of the question and then invoke the native question UI. After the intent is known, inspect only the context relevant to that route, distinguish a selected project from a broad workspace, preserve the original request, show the draft inventory and first direction, and ask before writing `.upstack/`. Stateless previews or explanations may continue without writing `.upstack/`.
 
 ## Inventory and provenance
 
@@ -16,7 +16,7 @@ Use `scripts/discover_github.py` for metadata-first public repository discovery.
 
 ## Learner ownership
 
-Use `scripts/onboarding.py` and `references/onboarding.md` to ask one relevant question per turn in this order: goal, source or project type, focus, time budget, relevant skill confidence, then guidance mode. Skip questions already answered or irrelevant to the selected route. Generate one stage at a time. Do not provide a complete implementation or every future lesson by default. Use `/overflow` for source-cited lessons, quizzes, exercises, hints, assessments, review, and durable learning memory; keep `.learning/` and `.upstack/` separate.
+Use `scripts/onboarding.py` and `references/onboarding.md` to ask one relevant question per turn in this order: intent, outcome detail, source or project type, focus, time budget, relevant skill confidence, then guidance mode. The first intent question is context-independent. Skip questions already answered or irrelevant to the selected route, and keep controller metadata such as `why_this_now` out of the user-facing message. Generate one stage at a time. Do not provide a complete implementation or every future lesson by default. Use `/overflow` for source-cited lessons, quizzes, exercises, hints, assessments, review, and durable learning memory; keep `.learning/` and `.upstack/` separate.
 
 ## External actions
 

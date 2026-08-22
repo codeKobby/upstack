@@ -3,6 +3,8 @@
 
 The helper never asks the learner directly and never writes files. It emits a
 question specification for a host-native question/choice UI or text fallback.
+The first question is deliberately context-independent: callers should not
+inspect a repository before the learner has stated what they want to achieve.
 """
 from __future__ import annotations
 
@@ -26,6 +28,8 @@ PROJECT_MARKERS = {
     "README.md",
     ".git",
 }
+
+SOURCE_GOALS = {"understand", "interview", "portfolio", "skill-upgrade", "rebuild", "discover"}
 
 
 def _is_home(path: Path) -> bool:
@@ -82,6 +86,17 @@ def context(path: Path) -> dict[str, Any]:
     }
 
 
+def intent_context() -> dict[str, Any]:
+    return {
+        "inspection_deferred": True,
+        "is_project_context": None,
+        "project_root": None,
+        "local_candidates": [],
+        "state_path": None,
+        "provenance": "intent gate only; repository and folder contents have not been inspected",
+    }
+
+
 def option(label: str, description: str, value: str) -> dict[str, str]:
     return {"label": label, "description": description, "value": value}
 
@@ -98,97 +113,193 @@ def question(question_id: str, text: str, options: list[dict[str, str]], *, why:
     }
 
 
-def next_question(ctx: dict[str, Any], answers: dict[str, Any]) -> dict[str, Any] | None:
+def _intent_question() -> dict[str, Any]:
+    return question(
+        "goal",
+        "What would you like to accomplish first?",
+        [
+            option("Learn how an existing project works", "Understand a real codebase, architecture, or feature.", "understand"),
+            option("Prepare for a technical interview", "Practice the concepts, implementation, and explanations a role requires.", "interview"),
+            option("Build a portfolio project", "Create a substantial project and document evidence of what you built.", "portfolio"),
+            option("Upgrade a specific skill", "Use a focused project to improve a technology or engineering ability.", "skill-upgrade"),
+            option("Build or rebuild a real project", "Follow a staged apprenticeship from an idea or reference to working slices.", "rebuild"),
+        ],
+        why="Your outcome determines the project workflow. I will ask about a repository or source only after you choose what you want from the work.",
+        allow_freeform=True,
+    )
+
+
+def _outcome_question(goal: str) -> dict[str, Any]:
+    if goal == "interview":
+        return question(
+            "outcome_detail",
+            "What role or interview target should we prepare for?",
+            [
+                option("Frontend or React", "Focus on UI architecture, browser behavior, state, and accessibility.", "frontend"),
+                option("Backend or API", "Focus on services, data, authentication, and reliability.", "backend"),
+                option("Full-stack", "Connect frontend, backend, data, testing, and deployment.", "fullstack"),
+                option("Language or systems", "Focus on runtime behavior, data structures, protocols, or tooling.", "systems"),
+            ],
+            why="Interview preparation must be tied to a role or skill requirement before choosing project material and practice format.",
+            allow_freeform=True,
+        )
+    if goal == "portfolio":
+        return question(
+            "outcome_detail",
+            "What kind of portfolio signal do you want to demonstrate?",
+            [
+                option("Product engineering", "A user-facing feature with thoughtful architecture and testing.", "product"),
+                option("Frontend depth", "UI quality, state, accessibility, performance, and component design.", "frontend"),
+                option("Backend depth", "APIs, data modeling, authentication, reliability, and observability.", "backend"),
+                option("Systems or developer tooling", "Protocols, parsing, performance, concurrency, or automation.", "systems"),
+            ],
+            why="A portfolio project is strongest when its intended engineering signal is explicit before choosing project material.",
+            allow_freeform=True,
+        )
+    if goal == "skill-upgrade":
+        return question(
+            "outcome_detail",
+            "Which skill or concept do you most want to improve?",
+            [
+                option("A language or framework", "Choose a specific technology and map it to project evidence.", "technology"),
+                option("Architecture and design", "Practice boundaries, data flow, trade-offs, and decomposition.", "architecture"),
+                option("Testing and debugging", "Practice verification, failure analysis, and maintainable changes.", "quality"),
+                option("Databases, APIs, or infrastructure", "Practice integration and production-oriented engineering.", "operations"),
+            ],
+            why="The target skill determines which project slice and difficulty signals matter.",
+            allow_freeform=True,
+        )
+    if goal == "rebuild":
+        return question(
+            "outcome_detail",
+            "What kind of real project or rebuild do you want to pursue?",
+            [
+                option("Rebuild an existing project", "Use a local or public repository as a reference without copying it wholesale.", "existing"),
+                option("Build a serious new project", "Start from an idea and create a project-sized learning recipe.", "new"),
+                option("Rebuild one feature or flow", "Choose a narrow vertical slice from a larger system.", "feature"),
+                option("Build toward a role requirement", "Use an explicit job or skill requirement to choose the project scope.", "role"),
+            ],
+            why="The project shape determines whether Upstack should inspect a reference, define a new build, or target one slice.",
+            allow_freeform=True,
+        )
+    return question(
+        "outcome_detail",
+        "What part of the project do you want to understand?",
+        [
+            option("The overall architecture", "Map the main modules, boundaries, and data flows.", "architecture"),
+            option("A feature or user journey", "Trace one request or flow from entrypoint to outcome.", "feature"),
+            option("A specific file, symbol, or test", "Start with a tightly bounded source target.", "target"),
+            option("The stack and concepts", "Create an ingredients map before tracing a deeper path.", "inventory"),
+        ],
+        why="A concrete understanding target keeps the first explanation grounded and manageable.",
+        allow_freeform=True,
+    )
+
+
+def _source_question(ctx: dict[str, Any], goal: str) -> dict[str, Any]:
+    options = []
+    if ctx.get("is_project_context"):
+        options.append(option("Use the current project", "Use the project opened in the coding agent after your intent is clear.", "current"))
+    options.extend([
+        option("Choose another local project", "Select a folder already on this machine.", "local"),
+        option("Find a public project", "Search metadata and enrich a shortlist before any clone or fork.", "discover"),
+    ])
+    if goal in {"interview", "skill-upgrade", "portfolio"}:
+        options.append(option("Start without a repository", "Create a role, skill, or portfolio plan before selecting source code.", "none"))
+    if goal in {"rebuild", "understand"}:
+        options.append(option("Provide a project path", "Use a local folder that is not listed here.", "custom"))
+    candidates = ctx.get("local_candidates") or []
+    options.extend(option(item["name"], item["path"], item["path"]) for item in candidates[:4])
+    return question(
+        "source",
+        "Where should we draw the project or practice material from?",
+        options,
+        why="Now that I know your intended outcome, I can ask for the source that supports it without assuming the current folder is what you want.",
+        allow_freeform=True,
+    )
+
+
+def _local_source_question(ctx: dict[str, Any]) -> dict[str, Any]:
+    options = [option("Use the current folder", "Use the folder opened in the coding agent.", "current")]
+    options.extend(option(item["name"], item["path"], item["path"]) for item in (ctx.get("local_candidates") or [])[:6])
+    options.append(option("I will provide a path", "Use a different local folder.", "custom"))
+    return question(
+        "source_path",
+        "Which local project should I use?",
+        options,
+        why="You chose local material, so I need a concrete folder before reading its files.",
+        allow_freeform=True,
+    )
+
+
+def _public_source_question() -> dict[str, Any]:
+    return question(
+        "source_detail",
+        "What kind of public project should I find?",
+        [
+            option("A serious web application", "Search across frontend, backend, data, and deployment signals.", "web-app"),
+            option("A frontend project", "Prioritize UI, state, accessibility, and frontend architecture.", "frontend"),
+            option("A backend or API project", "Prioritize services, data, authentication, and testing.", "backend"),
+            option("A tool, CLI, or systems project", "Prioritize runtimes, protocols, parsing, and operations.", "systems"),
+            option("I have a specific idea or job requirement", "Describe it in your own words for the metadata search.", "custom"),
+        ],
+        why="A narrower public-project search produces a more useful shortlist and better learning fit.",
+        allow_freeform=True,
+    )
+
+
+def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the next question without inspecting context before the intent gate."""
+    ctx = ctx or intent_context()
     goal = str(answers.get("goal", "")).lower()
     source = str(answers.get("source", "")).lower()
-    focus = str(answers.get("focus", "")).lower()
+
     if not answers.get("goal"):
-        if ctx.get("is_project_context"):
-            options = [
-                option("Understand the existing code", "Trace the architecture and one or more real flows.", "understand"),
-                option("Rebuild a feature", "Recreate a focused slice without copying the implementation.", "rebuild"),
-                option("Build a similar project", "Use this project as a reference for a staged rebuild.", "apprentice"),
-                option("Map the stack and concepts", "Create an ingredients report before choosing a build or study path.", "inventory"),
-                option("Find a different public project", "Search for a project that better matches a goal or portfolio direction.", "discover"),
-            ]
-            why = "I found a project in the current workspace. Your goal comes first; I will choose the smallest useful source and learning path after you answer."
-        else:
-            options = [
-                option("Understand an existing project", "Trace a local codebase or a project you will select next.", "understand"),
-                option("Rebuild a real project or feature", "Create a staged apprenticeship instead of a generic tutorial.", "rebuild"),
-                option("Find a public project to build", "Search repository metadata and show a shortlist before any clone or fork.", "discover"),
-                option("Start a new project", "Choose a meaningful project idea and create a guided build plan.", "new"),
-                option("Preview a workspace", "Inspect a folder without creating persistent Upstack state.", "preview"),
-            ]
-            why = "This workspace is broad, so I will identify your intended outcome before asking which project or source to use."
-            candidates = ctx.get("local_candidates") or []
-            if candidates:
-                names = ", ".join(item["name"] for item in candidates[:5])
-                why += f" Possible local projects include: {names}."
-        return question(
-            "goal",
-            "What would you like to accomplish first?",
-            options,
-            why=why,
-            allow_freeform=True,
-        )
-    if goal in {"understand", "rebuild", "apprentice", "inventory", "preview"} and not ctx.get("is_project_context") and not answers.get("source"):
+        return _intent_question()
+
+    if goal in {"preview", "preview-workspace"} and not answers.get("source"):
         return question(
             "source",
-            "Which local project should I inspect?",
+            "What would you like me to preview?",
             [
-                option("Use the current folder", "Use the folder you opened in the coding agent.", "current"),
-                *[option(item["name"], item["path"], item["path"]) for item in (ctx.get("local_candidates") or [])[:6]],
-                option("I will provide a path", "Use a different local folder.", "custom"),
+                option("The current workspace", "Describe folders and project markers without saving state.", "current"),
+                option("A specific local project", "Provide a path to the folder you want to inspect.", "custom"),
             ],
-            why="You chose to learn from an existing local codebase, so I need a concrete folder before reading its files.",
+            why="A preview is read-only, but I still need to know which folder you want to inspect.",
             allow_freeform=True,
         )
-    if goal == "discover" and not answers.get("source"):
-        return question(
-            "source",
-            "What kind of project should I find?",
-            [
-                option("A serious web application", "Search across frontend, backend, data, and deployment signals.", "web-app"),
-                option("A frontend project", "Prioritize UI, state, accessibility, and frontend architecture.", "frontend"),
-                option("A backend or API project", "Prioritize services, data, authentication, and testing.", "backend"),
-                option("A tool, CLI, or systems project", "Prioritize runtimes, protocols, parsing, and operations.", "systems"),
-                option("I have a specific idea", "Describe the project, stack, or job requirement in your own words.", "custom"),
-            ],
-            why="A narrower project type produces better metadata search results and a more useful shortlist.",
-            allow_freeform=True,
-        )
-    if goal == "new" and not answers.get("source"):
-        return question(
-            "source",
-            "What kind of project would you like to build?",
-            [
-                option("A real product-style web app", "Something with users, data, APIs, and deployable behavior.", "web-app"),
-                option("A frontend experience", "A polished UI with meaningful state and interaction.", "frontend"),
-                option("A backend or developer tool", "An API, service, CLI, parser, or automation tool.", "backend"),
-                option("Match a job requirement", "Use a role or skill list to choose a demonstrable project scope.", "role"),
-            ],
-            why="The project shape controls the stack assumptions and the first blueprint stages.",
-            allow_freeform=True,
-        )
+
+    if goal in {"understand", "interview", "portfolio", "skill-upgrade", "rebuild"} and not answers.get("outcome_detail"):
+        return _outcome_question(goal)
+
+    if goal in SOURCE_GOALS and not answers.get("source"):
+        return _source_question(ctx, goal)
+
+    if source == "local" and not answers.get("source_path"):
+        return _local_source_question(ctx)
+
+    if source == "discover" and not answers.get("source_detail"):
+        return _public_source_question()
+
     if not answers.get("focus"):
         return question(
             "focus",
-            "Where should we focus first?",
+            "What should we focus on first?",
             [
-                option("Full project", "Understand or build across the main layers.", "fullstack"),
+                option("The full project", "Work across the main layers.", "fullstack"),
                 option("Frontend only", "Pages, components, state, accessibility, and browser behavior.", "frontend"),
                 option("Backend or API only", "Routes, services, data, auth, jobs, or integrations.", "backend"),
                 option("One feature or user journey", "Follow one vertical slice from entrypoint to outcome.", "feature"),
                 option("A specific file, symbol, or test", "Start with a tightly bounded source target.", "target"),
             ],
-            why="A concrete focus keeps the first inventory and blueprint small enough to learn from.",
+            why="A concrete focus keeps the first inventory, practice plan, or rebuild slice manageable.",
             allow_freeform=True,
         )
+
     if not answers.get("time_budget"):
         return question(
             "time_budget",
-            "How much time should the first build or study stage fit into?",
+            "How much time should the first stage fit into?",
             [
                 option("About 30 minutes", "Keep the stage to one trace or very small change.", "30m"),
                 option("About 1–2 hours", "Use one vertical slice with focused checks.", "1-2h"),
@@ -197,11 +308,12 @@ def next_question(ctx: dict[str, Any], answers: dict[str, Any]) -> dict[str, Any
             ],
             why="Time budget determines stage size and prevents an overwhelming all-at-once tutorial.",
         )
+
     if not answers.get("skill_profile"):
-        focus_label = answers.get("focus") or source or "this project"
+        target = answers.get("focus") or answers.get("outcome_detail") or "this project"
         return question(
             "skill_profile",
-            f"How comfortable are you with the main technologies or concepts in {focus_label}?",
+            f"How comfortable are you with the relevant technologies or concepts in {target}?",
             [
                 option("New to most of them", "Start with vocabulary, a trace, and tight scaffolding.", "new"),
                 option("I can follow examples", "Use guided decisions and small implementation tasks.", "guided"),
@@ -211,6 +323,7 @@ def next_question(ctx: dict[str, Any], answers: dict[str, Any]) -> dict[str, Any
             why="This is the minimum calibration needed to choose the right explanation depth and stage size.",
             allow_freeform=True,
         )
+
     if not answers.get("mode"):
         return question(
             "mode",
@@ -231,12 +344,14 @@ def main() -> int:
     parser.add_argument("--answers", type=Path, help="JSON file containing normalized answers")
     parser.add_argument("--json", action="store_true", help="emit JSON")
     args = parser.parse_args()
-    ctx = context(args.path)
     answers: dict[str, Any] = {}
     if args.answers:
         answers = json.loads(args.answers.read_text(encoding="utf-8"))
-    payload = {"context": ctx, "next_question": next_question(ctx, answers)}
-    print(json.dumps(payload, indent=2))
+    if answers.get("goal"):
+        ctx = context(args.path)
+    else:
+        ctx = intent_context()
+    print(json.dumps({"context": ctx, "next_question": next_question(ctx, answers)}, indent=2))
     return 0
 
 

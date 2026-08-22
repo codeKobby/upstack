@@ -32,7 +32,7 @@ Examples:
 /upstack build the frontend only
 ```
 
-Upstack announces what it will do, why that route fits, and what happens next. If `.upstack/` is missing, it first checks whether the current folder is a real project or a broad workspace. It then asks one relevant question at a time, uses the host’s native question UI when available, adapts the next question to your answer, shows the draft inventory and first project direction, and asks before writing durable state.
+Upstack announces what it will do, why that route fits, and what happens next. It first captures your intended outcome before inspecting the current folder, repository, files, or detected stack. Only then does it determine whether a project source is needed, ask one relevant question at a time through the host’s native question UI when available, adapt the next question to your answer, show the draft inventory and first project direction, and ask before writing durable state.
 
 ## Commands
 
@@ -59,13 +59,13 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 
 ## Smooth first run
 
-When you run `/upstack` from a home directory or broad workspace, Upstack does not treat that folder as your project and does not silently pick one of its children. It begins with the learner’s intended outcome:
+When you run `/upstack`, Upstack first captures your intended outcome before inspecting the current folder, repository, files, detected stack, or home-directory contents. It begins with:
 
 > What would you like to accomplish first?
 
-It offers choices such as understanding an existing project, rebuilding a real project or feature, finding a public project to build, starting something new, or previewing the workspace. Only after the chosen intent needs a source does it ask whether to use a local project or public discovery. After each answer, it asks only the next question that changes the plan. For a known project, the first question is still about the learner’s goal; for public discovery, it asks what kind of project to search for; for a rebuild, it asks for focus and time before calibrating relevant technologies.
+It offers choices such as learning how an existing project works, preparing for a technical interview, building a portfolio project, upgrading a specific skill, or building or rebuilding a real project. Only after your intent is known does it ask where the project or practice material should come from. After each answer, it asks only the next question that changes the plan. For example, interview preparation asks for the target role before source selection, while a project rebuild asks what kind of rebuild you want before asking for a repository.
 
-The agent should use a native question tool or selectable prompt when the host provides one. In text-only hosts, it shows the same choices as a short numbered list and does not claim that the list is clickable. Fork, clone, install, execution, and persistent state remain separate confirmations.
+The agent should use a native question tool or selectable prompt when the host provides one. The native question output must be the only user-facing prompt for that turn; the agent must not print a prose list and then repeat it in the question UI. In text-only hosts, it shows the same choices as a short numbered list and does not claim that the list is clickable. Fork, clone, install, execution, and persistent state remain separate confirmations.
 
 ## The ingredients and recipe
 

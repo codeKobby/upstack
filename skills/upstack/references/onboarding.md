@@ -4,27 +4,28 @@ Upstack onboarding is a short adaptive interview, not a questionnaire dump. Its 
 
 ## First-run behavior
 
-The agent should first inspect only the current workspace context:
+The agent must begin with the learner’s intent. It must not inspect the current folder, repository, files, stack, home-directory contents, or child project names to decide the first question. The first turn is an intent gate only.
 
-- Is the current directory the user’s home directory or another broad workspace?
-- Is it inside a Git repository?
-- Does it contain recognizable project markers?
-- Are there obvious child project folders when the current directory is broad?
+After the intent answer, inspect only the context required by that route:
+
+- Is the selected source a local project, public project, or new-project brief?
+- Is a local path inside a Git repository or a broad workspace?
+- Does the selected project contain recognizable project markers?
 - Does the selected project already contain `.upstack/` state?
 
-Do not describe the home directory as a project. Do not scan or summarize unrelated sibling directories as though they are one repository. If the current location is broad, ask the learner what they want to work on before choosing a project. If obvious local candidates exist, include their names as options; do not silently choose one.
+Do not describe the home directory as a project. Do not scan or summarize unrelated sibling directories as though they are one repository. Do not list local candidates until the learner has chosen an intent that needs local material. If that intent needs a source, then inspect the workspace and offer candidate paths; do not silently choose one.
 
-Use user-facing language. Never mention internal helper names, internal routing phases, legacy state-directory names, or internal initializer wording. Start by asking what the learner wants to accomplish, not where the project comes from. For a broad workspace, say:
+Use user-facing language. Never mention internal helper names, internal routing phases, legacy state-directory names, or internal initializer wording. Start by asking what the learner wants to accomplish, not where the project comes from. Do not inspect the repository to decide this first question. For a broad workspace, say:
 
 > I’m not going to treat this folder as the project. What would you like to accomplish first?
 
 Offer these intent options:
 
-- **Understand an existing project** — trace a local or later-selected codebase.
-- **Rebuild a real project or feature** — create a staged apprenticeship rather than a generic tutorial.
-- **Find a public project to build** — search repository metadata and show a shortlist before any clone or fork.
-- **Start a new project** — choose a meaningful project idea and create a guided build plan.
-- **Preview a workspace** — inspect without saving a learning workspace.
+- **Learn how an existing project works** — understand a real codebase, architecture, or feature.
+- **Prepare for a technical interview** — practice the concepts, implementation, and explanations a role requires.
+- **Build a portfolio project** — create a substantial project and document evidence of what was built.
+- **Upgrade a specific skill** — use a focused project to improve a technology or engineering ability.
+- **Build or rebuild a real project** — follow a staged apprenticeship from an idea or reference to working slices.
 
 If a specific project path is already provided, announce:
 
@@ -41,7 +42,7 @@ When the host exposes a native question or choice tool—such as `AskUserQuestio
 - no internal command names in labels;
 - no option that silently performs a side effect.
 
-If no native question tool exists, render the same question as a short numbered or lettered list. Do not claim that text options are clickable.
+If no native question tool exists, render the same question as a short numbered or lettered list. Do not claim that text options are clickable. Do not print the prose list and then invoke the native question tool; the native question tool output is the only user-facing prompt for that turn.
 
 Do not ask all onboarding questions in one message. After each answer, normalize it and choose the next question from the answer. Skip questions that no longer affect the route.
 
@@ -63,28 +64,17 @@ Do not ask for a target role unless the learner chooses role matching, mentions 
 
 ## Branch examples
 
-### Broad workspace
+### Any starting location
 
-First ask:
+First ask, without inspecting the workspace:
 
 > What would you like to accomplish first?
 
-Offer the intent options above. After “Understand an existing project” or “Rebuild a real project or feature,” ask which local project or source to use. After “Find a public project to build,” ask what kind of project to search for. After “Start a new project,” ask what project shape. After “Preview a workspace,” inspect read-only and do not ask skill questions until the learner chooses to continue.
+Offer the intent options above. After “Learn how an existing project works,” “Prepare for a technical interview,” “Build a portfolio project,” “Upgrade a specific skill,” or “Build or rebuild a real project,” ask the next outcome-specific question. Only then ask where the project or practice material should come from. This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
 
 ### Known local repository
 
-First ask:
-
-> What would you like to accomplish first?
-
-Options:
-
-- **Understand the existing code**
-- **Rebuild a feature**
-- **Build a similar project**
-- **Map the stack and concepts first**
-
-Then ask focus, time budget, relevant skill confidence, and guidance mode. Do not ask where the repository is; it is already known.
+Still ask the same intent question first. Do not assume that opening a repository means the learner wants to study it. After the learner chooses an intent, offer **use the current project** as one possible source alongside another local project, public discovery, or no repository when the selected goal supports that option. Then ask focus, time budget, relevant skill confidence, and guidance mode.
 
 ### Public discovery
 

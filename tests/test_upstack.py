@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
+import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -156,22 +159,36 @@ class OnboardingTests(unittest.TestCase):
             first = module.next_question(report, {})
             self.assertEqual(first["id"], "goal")
             self.assertEqual(first["text"], "What would you like to accomplish first?")
-            self.assertIn("Find a public project to build", [item["label"] for item in first["options"]])
-            self.assertIn("Understand an existing project", [item["label"] for item in first["options"]])
+            self.assertIn("Prepare for a technical interview", [item["label"] for item in first["options"]])
+            self.assertIn("Learn how an existing project works", [item["label"] for item in first["options"]])
+
+    def test_first_turn_defers_workspace_inspection(self):
+        module = load_module("upstack_onboarding_deferred", ROOT / "scripts" / "onboarding.py")
+        output = io.StringIO()
+        with patch.object(module, "context", side_effect=AssertionError("context must be deferred")), patch.object(sys, "argv", ["onboarding.py", "/home/ubuntu"]), redirect_stdout(output):
+            module.main()
+        payload = json.loads(output.getvalue())
+        self.assertTrue(payload["context"]["inspection_deferred"])
+        self.assertEqual(payload["next_question"]["id"], "goal")
 
     def test_intent_is_asked_before_source_selection(self):
         module = load_module("upstack_onboarding_intent_first", ROOT / "scripts" / "onboarding.py")
-        report = module.context(Path.home())
-        first = module.next_question(report, {})
+        first = module.next_question(None, {})
         self.assertEqual(first["id"], "goal")
-        self.assertEqual(module.next_question(report, {"goal": "rebuild"})["id"], "source")
+        self.assertEqual(first["text"], "What would you like to accomplish first?")
+        self.assertEqual(module.next_question(None, {"goal": "rebuild"})["id"], "outcome_detail")
+        self.assertEqual(module.next_question(None, {"goal": "interview"})["id"], "outcome_detail")
 
     def test_question_sequence_adapts_to_discovery_answers(self):
         module = load_module("upstack_onboarding_sequence", ROOT / "scripts" / "onboarding.py")
         report = module.context(Path.cwd())
-        answers = {"goal": "discover"}
+        answers = {"goal": "rebuild"}
+        self.assertEqual(module.next_question(report, answers)["id"], "outcome_detail")
+        answers["outcome_detail"] = "existing"
         self.assertEqual(module.next_question(report, answers)["id"], "source")
-        answers["source"] = "frontend"
+        answers["source"] = "discover"
+        self.assertEqual(module.next_question(report, answers)["id"], "source_detail")
+        answers["source_detail"] = "frontend"
         self.assertEqual(module.next_question(report, answers)["id"], "focus")
         answers["focus"] = "frontend"
         self.assertEqual(module.next_question(report, answers)["id"], "time_budget")
