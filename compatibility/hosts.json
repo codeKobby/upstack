@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "package": "upstack",
+  "version": "0.1.0",
+  "universal_install": "npx skills add codeKobby/upstack --all",
+  "hosts": [
+    {
+      "id": "claude-code",
+      "display_name": "Claude Code",
+      "tier": "A",
+      "project_paths": [".claude/skills/<skill>/SKILL.md"],
+      "global_paths": ["~/.claude/skills/<skill>/SKILL.md"],
+      "invocation": ["/upstack", "automatic"],
+      "install": ["npx skills add codeKobby/upstack --all -a claude-code"]
+    },
+    {
+      "id": "codex",
+      "display_name": "OpenAI Codex CLI",
+      "tier": "A",
+      "project_paths": [".agents/skills/<skill>/SKILL.md"],
+      "global_paths": ["~/.agents/skills/<skill>/SKILL.md"],
+      "invocation": ["skill picker", "explicit skill use"],
+      "install": ["npx skills add codeKobby/upstack --all -a codex"],
+      "metadata": ["agents/openai.yaml"]
+    },
+    {
+      "id": "cline",
+      "display_name": "Cline",
+      "tier": "A",
+      "project_paths": [".cline/skills/<skill>/SKILL.md", ".clinerules/skills/<skill>/SKILL.md"],
+      "global_paths": ["~/.cline/skills/<skill>/SKILL.md"],
+      "invocation": ["slash command", "automatic use_skill"],
+      "install": ["npx skills add codeKobby/upstack --all -a cline"]
+    },
+    {
+      "id": "opencode",
+      "display_name": "OpenCode",
+      "tier": "A",
+      "project_paths": [".opencode/skills/<skill>/SKILL.md", ".agents/skills/<skill>/SKILL.md"],
+      "global_paths": ["~/.config/opencode/skills/<skill>/SKILL.md"],
+      "invocation": ["native skill tool", "slash UI"],
+      "install": ["npx skills add codeKobby/upstack --all -a opencode"]
+    },
+    {
+      "id": "antigravity",
+      "display_name": "Google Antigravity",
+      "tier": "A",
+      "project_paths": [".agents/skills/<skill>/SKILL.md", ".agent/skills/<skill>/SKILL.md"],
+      "global_paths": ["~/.gemini/config/skills/<skill>/SKILL.md"],
+      "invocation": ["automatic", "explicit skill mention"],
+      "install": ["npx skills add codeKobby/upstack --all -a antigravity"]
+    },
+    {
+      "id": "copilot-vscode",
+      "display_name": "GitHub Copilot in VS Code",
+      "tier": "A",
+      "project_paths": [".github/skills/<skill>/SKILL.md"],
+      "global_paths": ["configured chat.agentSkillsLocations"],
+      "invocation": ["/ skill menu", "automatic"],
+      "install": ["copy the skill folder to .github/skills"]
+    },
+    {
+      "id": "cursor",
+      "display_name": "Cursor",
+      "tier": "B",
+      "project_paths": ["host-specific; verify current release"],
+      "global_paths": ["host-specific; verify current release"],
+      "invocation": ["host skill UI or slash command"],
+      "install": ["npx skills add codeKobby/upstack --all -a cursor"]
+    },
+    {
+      "id": "factory",
+      "display_name": "Factory Droid",
+      "tier": "B",
+      "project_paths": ["host-specific; verify current release"],
+      "global_paths": ["host-specific; verify current release"],
+      "invocation": ["host skill UI"],
+      "install": ["npx skills add codeKobby/upstack --all -a factory"]
+    },
+    {
+      "id": "kiro",
+      "display_name": "Kiro",
+      "tier": "B",
+      "project_paths": ["host-specific; verify current release"],
+      "global_paths": ["host-specific; verify current release"],
+      "invocation": ["host skill UI"],
+      "install": ["npx skills add codeKobby/upstack --all -a kiro"]
+    },
+    {
+      "id": "slate",
+      "display_name": "Slate",
+      "tier": "B",
+      "project_paths": ["host-specific; verify current release"],
+      "global_paths": ["host-specific; verify current release"],
+      "invocation": ["host skill UI"],
+      "install": ["npx skills add codeKobby/upstack --all -a slate"]
+    },
+    {
+      "id": "hermes",
+      "display_name": "Hermes",
+      "tier": "B",
+      "project_paths": ["host-specific; verify current release"],
+      "global_paths": ["host-specific; verify current release"],
+      "invocation": ["host skill UI"],
+      "install": ["npx skills add codeKobby/upstack --all -a hermes"]
+    },
+    {
+      "id": "openclaw",
+      "display_name": "OpenClaw",
+      "tier": "C",
+      "project_paths": ["bridge-specific"],
+      "global_paths": ["bridge-specific"],
+      "invocation": ["conversational bridge", "spawned coding-agent session"],
+      "install": ["use the OpenClaw bridge or a supported coding agent"]
+    },
+    {
+      "id": "gbrain",
+      "display_name": "GBrain",
+      "tier": "C",
+      "project_paths": ["provider-specific"],
+      "global_paths": ["provider-specific"],
+      "invocation": ["provider-specific"],
+      "install": ["optional code-intelligence integration"]
+    }
+  ]
+}

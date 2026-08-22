@@ -1,0 +1,5 @@
+interface:
+  display_name: Upstack
+  short_description: Inventory, reverse engineer, and rebuild serious software projects.
+policy:
+  allow_implicit_invocation: false

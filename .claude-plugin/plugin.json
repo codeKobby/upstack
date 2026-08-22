@@ -1,0 +1,21 @@
+{
+  "name": "upstack",
+  "version": "0.1.0",
+  "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, metadata-first GitHub discovery, and honest portfolio evidence.",
+  "author": {
+    "name": "codeKobby",
+    "url": "https://github.com/codeKobby"
+  },
+  "homepage": "https://github.com/codeKobby/upstack",
+  "repository": "https://github.com/codeKobby/upstack",
+  "license": "MIT",
+  "keywords": [
+    "project-based-learning",
+    "reverse-engineering",
+    "repository-analysis",
+    "github-discovery",
+    "portfolio",
+    "agent-skills"
+  ],
+  "skills": ["./skills/upstack"]
+}

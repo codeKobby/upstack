@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.forge/
+.DS_Store
+.env
+.env.*
+!.env.example

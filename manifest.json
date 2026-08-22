@@ -1,0 +1,39 @@
+{
+  "name": "upstack",
+  "version": "0.1.0",
+  "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, public GitHub discovery, and honest portfolio evidence.",
+  "skills": ["upstack"],
+  "agents": [
+    "claude-code",
+    "codex",
+    "cline",
+    "opencode",
+    "antigravity",
+    "copilot-vscode",
+    "cursor",
+    "factory",
+    "kiro",
+    "slate",
+    "hermes",
+    "openclaw",
+    "gbrain"
+  ],
+  "compatibility": {
+    "contract": "compatibility/hosts.json",
+    "documentation": "compatibility/README.md",
+    "universal_install": "npx skills add codeKobby/upstack --all",
+    "tiers": {
+      "A": "native-portable",
+      "B": "installer-routed",
+      "C": "bridge"
+    }
+  },
+  "state_directory": ".forge",
+  "integrations": {
+    "github_cli": "optional-preferred-for-authenticated-actions",
+    "github_rest": "optional-public-read-only-fallback",
+    "web_search": "optional-public-discovery-fallback",
+    "mcp": "optional-provider-accelerator"
+  },
+  "license": "MIT"
+}
