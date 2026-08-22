@@ -135,7 +135,7 @@ The default shortlist contains three repositories; use five for a broad search. 
 /upstack discover projects that teach React, APIs, testing, and databases --count 5
 ```
 
-The candidate report is read-only. It does not clone, fork, install, or execute anything until you select a candidate and confirm each action.
+The candidate report is read-only. After it is shown, Upstack asks one shortlist-action question: choose a repository, search for more candidates, or stop. If you choose a repository, it asks a separate candidate-only question. These questions are never combined. A numeric answer is interpreted only within the active question, so `2` on the action question means “search for more candidates,” while `2` on the candidate question means the second repository. It does not clone, fork, install, or execute anything until you select a candidate and confirm each action.
 
 ## GitHub CLI, API, web, and MCP options
 

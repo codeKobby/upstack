@@ -75,7 +75,7 @@ Do not present the score without its breakdown. Include uncertainty such as miss
 A candidate summary should look like:
 
 ```text
-1. owner/repo — 82/100
+candidate:owner/repo — 82/100
    Metadata: TypeScript; topics: api, react; 12.4k stars; MIT; pushed recently.
    README: setup, architecture, tests, and deployment sections found.
    Root signals: package scripts, CI, test directory, Docker configuration.
@@ -83,6 +83,14 @@ A candidate summary should look like:
    Risks: requires an external database and has a large deployment surface.
    Provenance: metadata + README SHA + targeted root files.
 ```
+
+## Shortlist interaction contract
+
+After rendering the candidate report, ask one question with only these actions: **choose a repository to explore**, **search for more candidates**, or **stop here**. Do not repeat those actions in prose when using a native question tool. During this action turn, label candidate rows with their full repository names or stable `candidate:OWNER/REPO` identifiers; do not number candidate rows, because action numbers and candidate numbers must never coexist in the same turn.
+
+If the learner chooses **choose a repository to explore**, ask a separate second question containing only the enriched candidate repositories. Use stable values such as `candidate:OWNER/REPO`, not an unlabeled number that can be confused with an action choice. Numeric replies are scoped to the active question: `2` on the action question means **search for more candidates**; `2` on the candidate question means the second repository. Never accept a candidate number while the action question is active, and never interpret an action number as a candidate selection.
+
+In a text-only host, render one short numbered or lettered list for the active question only. Do not add a second numbered list for candidates while the action question is active. In a native-question host, the native question output is the only user-facing prompt for that turn. Do not show a prose action menu followed by a native candidate question, or a prose candidate menu followed by a native action question.
 
 ## Search backends
 

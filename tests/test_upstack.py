@@ -16,6 +16,7 @@ if not (ROOT / "scripts" / "inventory_repo.py").exists():
     ROOT = Path("/home/ubuntu/skills/upstack")
 INVENTORY = ROOT / "scripts" / "inventory_repo.py"
 DISCOVERY = ROOT / "scripts" / "discover_github.py"
+DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
 
 
 def load_module(name: str, path: Path):
@@ -104,6 +105,27 @@ class UpstackTests(unittest.TestCase):
         self.assertIn("package.json", candidate["targeted_files"])
         self.assertGreater(candidate["score"]["overall"], 0)
         self.assertEqual(report["side_effects"], [])
+
+    def test_discovery_interaction_separates_actions_from_candidate_selection(self):
+        module = load_module("upstack_discovery_interaction", DISCOVERY_INTERACTION)
+        report = {
+            "candidates": [
+                {"metadata": {"fullName": "owner/first", "description": "First project"}, "score": {"overall": 90}},
+                {"metadata": {"fullName": "owner/second", "description": "Second project"}, "score": {"overall": 80}},
+            ]
+        }
+        action_question = module.next_question(report)
+        self.assertEqual(action_question["id"], "discovery_action")
+        self.assertEqual([option["value"] for option in action_question["options"]], ["choose_candidate", "broaden_search", "finish"])
+        self.assertEqual(module.resolve_answer(action_question, "2")["value"], "broaden_search")
+        self.assertNotIn("owner/second", json.dumps(action_question))
+
+        candidate_question = module.next_question(report, "choose_candidate")
+        self.assertEqual(candidate_question["id"], "candidate_selection")
+        self.assertEqual([option["value"] for option in candidate_question["options"]], ["candidate:owner/first", "candidate:owner/second"])
+        self.assertEqual(module.resolve_answer(candidate_question, "2")["value"], "candidate:owner/second")
+        with self.assertRaises(ValueError):
+            module.resolve_answer(action_question, "candidate:owner/second")
 
     def test_discovery_never_calls_fork_clone_or_install(self):
         module = load_module("upstack_discovery_side_effects", DISCOVERY)

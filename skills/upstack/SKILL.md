@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "0.1.0"
+  version: "0.3.0"
   package: upstack
 ---
 
@@ -64,7 +64,7 @@ Use `.upstack/` for Upstack state. Do not create, modify, or delete it without t
 | `/upstack status` | Show active project, focus, stage, evidence, uncertainty, and next action. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 
-Present meaningful choices through the host’s native question tool when available, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable.
+Present meaningful choices through the host’s native question tool when available, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable. Keep action choices and object choices separate: never show an action menu and a candidate-number menu in the same turn, and interpret numeric replies only within the active question.
 
 ## Initialize the project apprenticeship
 
@@ -174,7 +174,11 @@ Use `scripts/discover_github.py "<query>" --count 3` for a read-only shortlist. 
 4. Read only targeted root files such as `package.json`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `Dockerfile`, `docker-compose.yml`, `tsconfig.json`, and framework configuration when present.
 5. Rank candidates with an explainable score for stack fit, documentation, testability, license clarity, maintenance, and popularity signal. Show the breakdown and uncertainty.
 6. Present a shortlist with repository URL, license, stack, difficulty, learning value, evidence quality, maintenance signal, portfolio signal, and risks.
-7. Wait for the learner to choose before any fork, clone, install, or execution.
+7. Present the shortlist, then stop and ask exactly one shortlist-action question. Do not put candidate numbers and action choices in the same question or prose menu.
+8. If the learner chooses **choose a repository**, ask a new, candidate-only question whose option values are stable repository identifiers such as `candidate:OWNER/REPO`. Resolve the answer against that candidate question only. A reply such as `2` to the action question means the second action, never candidate number 2.
+9. Wait for candidate selection before any fork, clone, install, or execution.
+
+Use `scripts/discovery_interaction.py` to build and resolve these two questions when deterministic support is useful. With a native question tool, send only the returned question for the current turn; do not print an equivalent prose menu. In a text-only host, render only that one question as a short numbered or lettered list. After **broaden search** or **stop here**, do not infer a candidate selection.
 
 Repository metadata is the first stage, not the entire analysis. README and targeted content enrich and verify the shortlist. Stars and forks are popularity signals, not proof of educational quality or maintainability. An absent or unclear license must remain visible as a risk.
 
