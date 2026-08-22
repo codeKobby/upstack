@@ -44,6 +44,7 @@ If the repository has no `.forge/` state, announce that `/init` will inspect it 
 | `/upstack role` | Map a user-provided job description or skill requirement to project stages and evidence gaps. |
 | `/upstack portfolio` | Generate portfolio documentation from observed learner work only. |
 | `/upstack status` | Show active project, focus, stage, evidence, uncertainty, and next action. |
+| `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 
 Present meaningful choices as selectable questions when the host supports them. Otherwise show the same choices as numbered or lettered text.
 
@@ -207,6 +208,7 @@ Do not silently overwrite `.learning/` or `.forge/`. Link artifacts by relative 
 Run bundled helpers with `--help` first when available:
 
 ```bash
+python3 scripts/check_capabilities.py --json
 python3 scripts/inventory_repo.py . --output .forge/PROJECT_INVENTORY.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output .forge/candidates/search.json
 ```

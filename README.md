@@ -54,6 +54,7 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 | `/upstack role` | Map a user-provided job description to project stages and evidence gaps. |
 | `/upstack portfolio` | Produce evidence-backed project and resume documentation. |
 | `/upstack status` | Show the current project, focus, stage, evidence, uncertainty, and next action. |
+| `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 
 ## The ingredients and recipe
 
@@ -164,6 +165,7 @@ Neither skill silently overwrites the other’s `.forge/` or `.learning/` state.
 ## Local validation
 
 ```bash
+python3 scripts/check_capabilities.py --json
 python3 scripts/inventory_repo.py /path/to/repository --output /tmp/inventory.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output /tmp/candidates.json
 python3 -m unittest discover -s tests -p 'test_*.py' -v

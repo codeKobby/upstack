@@ -9,6 +9,8 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if not (ROOT / "scripts" / "inventory_repo.py").exists():
+    ROOT = Path("/home/ubuntu/skills/upstack")
 INVENTORY = ROOT / "scripts" / "inventory_repo.py"
 DISCOVERY = ROOT / "scripts" / "discover_github.py"
 
@@ -125,3 +127,14 @@ class UpstackTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CapabilityTests(unittest.TestCase):
+    def test_capability_checker_reports_cli_without_exposing_token(self):
+        module = load_module("upstack_capabilities", ROOT / "scripts" / "check_capabilities.py")
+        with patch.object(module.shutil, "which", side_effect=lambda name: "/usr/bin/" + name if name in {"git", "gh", "curl"} else None), patch.object(module, "run", side_effect=[(0, "gh version 2.95.0\n", ""), (0, "  ✓ Logged in to github.com account learner\n", "token: secret-value\n")]):
+            report = module.capability_report()
+        self.assertTrue(report["github_cli"]["available"])
+        self.assertTrue(report["github_cli"]["authenticated"])
+        self.assertEqual(report["github_cli"]["account"], "learner")
+        self.assertNotIn("secret-value", json.dumps(report))
