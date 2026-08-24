@@ -30,6 +30,9 @@ PROJECT_MARKERS = {
 }
 
 SOURCE_GOALS = {"understand", "interview", "portfolio", "skill-upgrade", "rebuild", "discover"}
+BUILD_GOALS = {"interview", "portfolio", "skill-upgrade", "rebuild"}
+PROJECT_MODES = {"rebuild", "scratch", "clone", "study"}
+PATH_DESTINATIONS = {"new-local", "clone-local", "worktree", "notes-folder", "portfolio-repo"}
 
 
 def _is_home(path: Path) -> bool:
@@ -79,6 +82,7 @@ def context(path: Path) -> dict[str, Any]:
         "cwd": str(path),
         "is_home": _is_home(path),
         "is_project_context": bool(project),
+        "is_broad_workspace": not bool(project),
         "project_root": project,
         "local_candidates": _local_candidates(path),
         "state_path": str(Path(project) / ".upstack") if project else None,
@@ -86,10 +90,66 @@ def context(path: Path) -> dict[str, Any]:
     }
 
 
+def validate_destination(raw_path: str | Path, current_path: str | Path | None = None) -> dict[str, Any]:
+    """Resolve a proposed local destination without creating or modifying it."""
+    raw = str(raw_path or "").strip()
+    base = Path(current_path or Path.cwd()).expanduser().resolve()
+    if not raw:
+        return {"valid": False, "status": "missing", "input": raw, "resolved_path": None, "write_performed": False}
+    candidate = Path(raw).expanduser()
+    resolved = (base / candidate if not candidate.is_absolute() else candidate).resolve()
+    home = Path.home().resolve()
+    if resolved in {Path("/"), home}:
+        return {"valid": False, "status": "too_broad", "input": raw, "resolved_path": str(resolved), "write_performed": False}
+    if resolved == base and not _has_project_markers(base):
+        return {"valid": False, "status": "same_as_broad_workspace", "input": raw, "resolved_path": str(resolved), "write_performed": False}
+    if resolved.exists():
+        if not resolved.is_dir():
+            status = "existing_file"
+            valid = False
+        elif _has_project_markers(resolved) or (resolved / ".git").exists():
+            status = "existing_project"
+            valid = True
+        else:
+            status = "existing_folder"
+            valid = True
+        return {"valid": valid, "status": status, "input": raw, "resolved_path": str(resolved), "write_performed": False}
+    parent = resolved.parent
+    if not parent.exists():
+        status = "parent_missing"
+        valid = False
+    elif not parent.is_dir():
+        status = "parent_not_directory"
+        valid = False
+    else:
+        status = "new_folder_under_existing_parent"
+        valid = True
+    return {"valid": valid, "status": status, "input": raw, "resolved_path": str(resolved), "write_performed": False}
+
+
+def _destination_path_question(project_mode: str, destination: str, *, validation: dict[str, Any] | None = None) -> dict[str, Any]:
+    prompt = "What exact local folder should hold the project code or learning artifacts?"
+    why = "A broad workspace is not a project destination. I need the exact path before creating files, scaffolding, cloning, or saving `.upstack/` state."
+    if validation and not validation.get("valid"):
+        prompt = "What different local folder should hold the project code or learning artifacts?"
+        why = f"The proposed destination was not usable ({validation.get('status')}). No files were written; provide a concrete folder whose parent exists."
+    return question(
+        "destination_path",
+        prompt,
+        [
+            option("I will enter an absolute or `~` path", "The path is resolved and shown back to you before any write.", "custom"),
+            option("I will enter a path relative to the current workspace", "Use a child path only; Upstack will not write to the broad workspace itself.", "workspace-relative"),
+        ],
+        why=why,
+        allow_freeform=True,
+    )
+
+
 def intent_context() -> dict[str, Any]:
     return {
         "inspection_deferred": True,
         "is_project_context": None,
+        "is_broad_workspace": None,
         "project_root": None,
         "local_candidates": [],
         "state_path": None,
@@ -196,8 +256,121 @@ def _outcome_question(goal: str) -> dict[str, Any]:
     )
 
 
-def _source_question(ctx: dict[str, Any], goal: str) -> dict[str, Any]:
+def _project_mode_question(goal: str) -> dict[str, Any]:
+    return question(
+        "project_mode",
+        "How should we work with the project?",
+        [
+            option("Rebuild an existing project", "Study a reference and reproduce it in learning-sized slices without copying it wholesale.", "rebuild"),
+            option("Build from scratch", "Start with an idea and design and implement a new project progressively.", "scratch"),
+            option("Clone and adapt a public project", "Choose a verified repository, clone it only after confirmation, and learn by changing bounded slices.", "clone"),
+            option("Study or trace without changing the source", "Understand an existing codebase while keeping the source read-only.", "study"),
+        ],
+        why="The project mode determines whether Upstack needs a reference source, a new-project brief, or a later clone confirmation.",
+        allow_freeform=True,
+    )
+
+
+def _destination_question(project_mode: str) -> dict[str, Any]:
+    if project_mode == "scratch":
+        options = [
+            option("A new local project folder", "Create the learning project in a folder you choose after the plan is approved.", "new-local"),
+            option("An isolated branch or worktree", "Keep the build separate from another local checkout; show the exact base and target first.", "worktree"),
+            option("A new portfolio repository later", "Plan locally first, then ask separately before creating or publishing a repository.", "portfolio-repo"),
+            option("Plan only for now", "Create the curriculum and design brief without writing project code yet.", "plan-only"),
+        ]
+    elif project_mode == "clone":
+        options = [
+            option("A new local clone folder", "Show the exact clone destination and ask before cloning.", "clone-local"),
+            option("An isolated branch or worktree", "Clone or attach the reference in an isolated location after confirmation.", "worktree"),
+            option("A new portfolio repository later", "Keep the reference and portfolio destination separate; publishing requires another confirmation.", "portfolio-repo"),
+            option("Plan only before cloning", "Prepare the route and shortlist without cloning, installing, or executing anything.", "plan-only"),
+        ]
+    elif project_mode == "rebuild":
+        options = [
+            option("A new local rebuild folder", "Keep the original reference untouched and build in a separate folder.", "new-local"),
+            option("An isolated branch or worktree", "Rebuild beside an existing checkout with the base and target shown first.", "worktree"),
+            option("A new portfolio repository later", "Build locally first, then ask separately before publishing evidence or code.", "portfolio-repo"),
+            option("Reference-only learning plan", "Map the rebuild without writing implementation code yet.", "plan-only"),
+        ]
+    else:
+        options = [
+            option("Keep the source unchanged and save `.upstack/` beside it", "Store only learning state and source-cited artifacts; do not modify the project.", "source-adjacent"),
+            option("A separate notes folder", "Keep the source read-only and place approved learning artifacts elsewhere.", "notes-folder"),
+            option("Plan only for now", "Create a route without writing files until you approve a destination.", "plan-only"),
+        ]
+    return question(
+        "destination",
+        "Where should the learning project or its artifacts live?",
+        options,
+        why="Destination is separate from project mode so Upstack never assumes that the opened folder is where new code, a clone, or portfolio work belongs.",
+        allow_freeform=True,
+    )
+
+
+def _destination_confirmation_question(validation: dict[str, Any], project_mode: str) -> dict[str, Any]:
+    resolved = validation.get("resolved_path") or "the proposed path"
+    return question(
+        "destination_confirmation",
+        f"Use `{resolved}` as the local destination for this {project_mode} project?",
+        [
+            option("Yes, use this destination", "Keep the resolved path and continue with the plan; no files are written by this question.", "confirmed"),
+            option("Choose a different destination", "Return to the exact-path question before planning or writing.", "change"),
+            option("Plan only for now", "Keep the route in memory without creating code or project files.", "plan-only"),
+        ],
+        why="The resolved path is shown separately so a destination choice cannot be mistaken for permission to write, scaffold, clone, or save state.",
+    )
+
+
+def _project_brief_question() -> dict[str, Any]:
+    return question(
+        "project_brief",
+        "What should we build from scratch?",
+        [
+            option("I have an idea to describe", "Give a short product, user, or technical goal in your own words.", "custom"),
+            option("Turn a role or skill target into a project", "Use a job requirement or concept gap as the project brief.", "target"),
+            option("Help me choose a bounded project idea", "Ask a few constraints before proposing a project-sized build.", "guided"),
+        ],
+        why="A scratch build needs a small product or technical brief before Upstack can map the complete curriculum or UI.",
+        allow_freeform=True,
+    )
+
+
+def _design_question(ctx: dict[str, Any]) -> dict[str, Any]:
+    options = [
+        option("Create a portable Markdown wireframe first", "Produce a product brief, screen map, and low-fidelity wireframe that works in every coding agent.", "portable"),
+    ]
+    available = {str(item).casefold() for item in (ctx.get("design_tools") or [])}
+    if "stitch-mcp" in available or "stitch" in available:
+        options.append(option("Use Stitch through the connected MCP", "Generate or iterate visual screens in Stitch, then preserve the approved design contract locally.", "stitch-mcp"))
+    options.extend([
+        option("Use an existing visual reference", "Describe or supply an approved screenshot, URL, or design reference without assuming ownership of it.", "reference"),
+        option("No graphical UI", "Start with API, CLI, data, or systems design and skip screen design for this project.", "none"),
+    ])
+    return question(
+        "ui_design",
+        "How should we design the user experience before implementation?",
+        options,
+        why="A scratch build should settle the user journey and interface boundary before the first implementation slice; visual tooling is optional and must have a portable fallback.",
+        allow_freeform=True,
+    )
+
+
+def _source_question(ctx: dict[str, Any], goal: str, project_mode: str = "study") -> dict[str, Any]:
     options = []
+    if project_mode == "clone":
+        options.extend([
+            option("Find a public project", "Search metadata and enrich a shortlist before any clone or fork.", "discover"),
+            option("Choose a local reference project", "Select a folder already on this machine before any copy or worktree action.", "local"),
+            option("Provide a repository URL", "Give a public repository URL for metadata verification before cloning.", "custom"),
+        ])
+        return question(
+            "source",
+            "Which existing project should we clone and adapt?",
+            options,
+            why="A clone route needs an explicit reference before Upstack can show a destination and request clone confirmation.",
+            allow_freeform=True,
+        )
     if ctx.get("is_project_context"):
         options.append(option("Use the current project", "Use the project opened in the coding agent after your intent is clear.", "current"))
     options.extend([
@@ -214,7 +387,7 @@ def _source_question(ctx: dict[str, Any], goal: str) -> dict[str, Any]:
         "source",
         "Where should we draw the project or practice material from?",
         options,
-        why="Now that I know your intended outcome, I can ask for the source that supports it without assuming the current folder is what you want.",
+        why="Now that I know your intended outcome and project mode, I can ask for the source that supports it without assuming the current folder is what you want.",
         allow_freeform=True,
     )
 
@@ -252,6 +425,7 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
     """Return the next question without inspecting context before the intent gate."""
     ctx = ctx or intent_context()
     goal = str(answers.get("goal", "")).lower()
+    project_mode = str(answers.get("project_mode", "")).lower()
     source = str(answers.get("source", "")).lower()
 
     if not answers.get("goal"):
@@ -272,8 +446,34 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
     if goal in {"understand", "interview", "portfolio", "skill-upgrade", "rebuild"} and not answers.get("outcome_detail"):
         return _outcome_question(goal)
 
-    if goal in SOURCE_GOALS and not answers.get("source"):
-        return _source_question(ctx, goal)
+    if goal in SOURCE_GOALS and not answers.get("project_mode"):
+        return _project_mode_question(goal)
+
+    if project_mode not in PROJECT_MODES and goal in SOURCE_GOALS:
+        return _project_mode_question(goal)
+
+    if goal in SOURCE_GOALS and not answers.get("destination"):
+        return _destination_question(project_mode)
+
+    destination = str(answers.get("destination", "")).lower()
+    destination_path = answers.get("destination_path")
+    if destination in PATH_DESTINATIONS:
+        if not destination_path or str(destination_path).lower() in {"custom", "workspace-relative"}:
+            return _destination_path_question(project_mode, destination)
+        validation = validate_destination(str(destination_path), ctx.get("cwd"))
+        if not validation["valid"]:
+            return _destination_path_question(project_mode, destination, validation=validation)
+        if answers.get("destination_confirmed") != "confirmed":
+            return _destination_confirmation_question(validation, project_mode)
+
+    if project_mode == "scratch" and not answers.get("project_brief"):
+        return _project_brief_question()
+
+    if project_mode == "scratch" and not answers.get("ui_design"):
+        return _design_question(ctx)
+
+    if project_mode in {"rebuild", "clone", "study"} and not answers.get("source"):
+        return _source_question(ctx, goal, project_mode)
 
     if source == "local" and not answers.get("source_path"):
         return _local_source_question(ctx)
@@ -416,6 +616,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="emit JSON")
     parser.add_argument("--host", default="generic", help="host identifier for provenance; capability is selected separately")
     parser.add_argument("--question-mode", choices=("auto", "native-single", "native-multi"), default="auto", help="verified host question capability")
+    parser.add_argument("--design-tool", action="append", default=[], help="verified callable design capability, such as stitch-mcp; repeatable")
     parser.add_argument("--chain", action="store_true", help="deprecated alias for --question-mode native-multi")
     args = parser.parse_args()
     answers: dict[str, Any] = {}
@@ -427,6 +628,8 @@ def main() -> int:
         ctx = intent_context()
     if args.chain:
         args.question_mode = "native-multi"
+    if args.design_tool:
+        ctx["design_tools"] = args.design_tool
     payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host, question_mode=args.question_mode)}
     print(json.dumps(payload, indent=2))
     return 0

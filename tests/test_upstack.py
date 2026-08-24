@@ -21,6 +21,7 @@ DISCOVERY_PROJECTS = ROOT / "scripts" / "discover_projects.py"
 HOST_MATRIX = ROOT / "compatibility" / "hosts.json"
 VIDEO_EVIDENCE = ROOT / "scripts" / "video_evidence.py"
 INSTALL_COMPANION = ROOT / "scripts" / "install_video_companion.py"
+UI_DESIGN = ROOT / "scripts" / "ui_design.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -361,6 +362,10 @@ class OnboardingTests(unittest.TestCase):
         answers = {
             "goal": "rebuild",
             "outcome_detail": "existing",
+            "project_mode": "clone",
+            "destination": "clone-local",
+            "destination_path": "/tmp/upstack-chain-clone",
+            "destination_confirmed": "confirmed",
             "source": "discover",
             "source_detail": "frontend",
         }
@@ -376,10 +381,14 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
+        self.assertEqual(matrix["version"], "1.3.0")
+        self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
+        self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
+        self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
 
     def test_verified_native_multi_capability_is_host_neutral(self):
         module = load_module("upstack_onboarding_host_neutral", ROOT / "scripts" / "onboarding.py")
-        answers = {"goal": "rebuild", "outcome_detail": "existing", "source": "discover", "source_detail": "frontend"}
+        answers = {"goal": "rebuild", "outcome_detail": "existing", "project_mode": "clone", "destination": "clone-local", "destination_path": "/tmp/upstack-host-neutral-clone", "destination_confirmed": "confirmed", "source": "discover", "source_detail": "frontend"}
         plan = module.question_plan(None, answers, host="claude-code", question_mode="native-multi")
         self.assertEqual(plan["mode"], "native-multi-question-when-safe")
         self.assertEqual([item["id"] for item in plan["questions"]], ["focus", "time_budget"])
@@ -394,8 +403,10 @@ class OnboardingTests(unittest.TestCase):
         module = load_module("upstack_onboarding_chain_boundaries", ROOT / "scripts" / "onboarding.py")
         intent_plan = module.question_plan(None, {}, host="opencode")
         self.assertEqual([item["id"] for item in intent_plan["questions"]], ["goal"])
-        source_plan = module.question_plan(None, {"goal": "rebuild", "outcome_detail": "existing"}, host="opencode")
-        self.assertEqual([item["id"] for item in source_plan["questions"]], ["source"])
+        mode_plan = module.question_plan(None, {"goal": "rebuild", "outcome_detail": "existing"}, host="opencode")
+        self.assertEqual([item["id"] for item in mode_plan["questions"]], ["project_mode"])
+        destination_plan = module.question_plan(None, {"goal": "rebuild", "outcome_detail": "existing", "project_mode": "clone"}, host="opencode")
+        self.assertEqual([item["id"] for item in destination_plan["questions"]], ["destination"])
 
     def test_generic_host_keeps_one_question_fallback(self):
         module = load_module("upstack_onboarding_generic_plan", ROOT / "scripts" / "onboarding.py")
@@ -420,6 +431,14 @@ class OnboardingTests(unittest.TestCase):
         answers = {"goal": "rebuild"}
         self.assertEqual(module.next_question(report, answers)["id"], "outcome_detail")
         answers["outcome_detail"] = "existing"
+        self.assertEqual(module.next_question(report, answers)["id"], "project_mode")
+        answers["project_mode"] = "clone"
+        self.assertEqual(module.next_question(report, answers)["id"], "destination")
+        answers["destination"] = "clone-local"
+        self.assertEqual(module.next_question(report, answers)["id"], "destination_path")
+        answers["destination_path"] = "/tmp/upstack-sequence-clone"
+        self.assertEqual(module.next_question(report, answers)["id"], "destination_confirmation")
+        answers["destination_confirmed"] = "confirmed"
         self.assertEqual(module.next_question(report, answers)["id"], "source")
         answers["source"] = "discover"
         self.assertEqual(module.next_question(report, answers)["id"], "source_detail")
@@ -433,6 +452,73 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual(module.next_question(report, answers)["id"], "mode")
         answers["mode"] = "coach"
         self.assertIsNone(module.next_question(report, answers))
+
+    def test_scratch_route_requires_destination_brief_and_design_before_focus(self):
+        module = load_module("upstack_onboarding_scratch", ROOT / "scripts" / "onboarding.py")
+        report = module.intent_context()
+        answers = {"goal": "rebuild", "outcome_detail": "new"}
+        self.assertEqual(module.next_question(report, answers)["id"], "project_mode")
+        answers["project_mode"] = "scratch"
+        self.assertEqual(module.next_question(report, answers)["id"], "destination")
+        answers["destination"] = "new-local"
+        self.assertEqual(module.next_question(report, answers)["id"], "destination_path")
+        answers["destination_path"] = "/tmp/upstack-scratch-project"
+        answers["destination_confirmed"] = "confirmed"
+        self.assertEqual(module.next_question(report, answers)["id"], "project_brief")
+        answers["project_brief"] = "custom"
+        self.assertEqual(module.next_question(report, answers)["id"], "ui_design")
+        answers["ui_design"] = "portable"
+        self.assertEqual(module.next_question(report, answers)["id"], "focus")
+
+    def test_broad_workspace_requires_exact_destination_and_confirmation(self):
+        module = load_module("upstack_onboarding_destination", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            answers = {"goal": "rebuild", "outcome_detail": "new", "project_mode": "scratch", "destination": "new-local"}
+            self.assertEqual(module.next_question(module.context(workspace), answers)["id"], "destination_path")
+            rejected = module.validate_destination(workspace, workspace)
+            self.assertFalse(rejected["valid"])
+            self.assertEqual(rejected["status"], "same_as_broad_workspace")
+            target = workspace / "focus-board"
+            accepted = module.validate_destination(target, workspace)
+            self.assertTrue(accepted["valid"])
+            self.assertEqual(accepted["status"], "new_folder_under_existing_parent")
+            answers["destination_path"] = str(target)
+            self.assertEqual(module.next_question(module.context(workspace), answers)["id"], "destination_confirmation")
+            answers["destination_confirmed"] = "confirmed"
+            self.assertEqual(module.next_question(module.context(workspace), answers)["id"], "project_brief")
+            self.assertFalse(target.exists())
+
+    def test_scratch_route_exposes_stitch_only_when_capability_is_verified(self):
+        module = load_module("upstack_onboarding_design_capability", ROOT / "scripts" / "onboarding.py")
+        answers = {"goal": "rebuild", "outcome_detail": "new", "project_mode": "scratch", "destination": "new-local", "destination_path": "/tmp/upstack-scratch-design", "destination_confirmed": "confirmed", "project_brief": "custom"}
+        without = module.next_question({"design_tools": []}, answers)
+        self.assertNotIn("stitch-mcp", [item["value"] for item in without["options"]])
+        with_stitch = module.next_question({"design_tools": ["stitch-mcp"]}, answers)
+        self.assertIn("stitch-mcp", [item["value"] for item in with_stitch["options"]])
+
+    def test_ui_design_helper_keeps_markdown_fallback_and_gates_remote_writes(self):
+        module = load_module("upstack_ui_design", UI_DESIGN)
+        brief = {
+            "name": "Focus Board",
+            "problem": "Help learners track one project slice.",
+            "audience": "Developers learning by building.",
+            "primary_action": "Open the next stage",
+            "screens": [{"name": "Home", "goal": "Choose a stage", "elements": ["Stage list", "Progress", "Open stage"]}],
+        }
+        portable = module.build_design_plan(brief, mode="portable")
+        self.assertEqual(portable["workflow"]["curriculum_scope"], "map_the_complete_project_before_teaching")
+        self.assertEqual(portable["workflow"]["lesson_delivery"], "generate_one_current_stage_at_a_time")
+        self.assertEqual(portable["integration"]["status"], "not_required")
+        self.assertFalse(portable["integration"]["remote_write"])
+        self.assertIn("# Focus Board — Wireframe", module.render_wireframe_markdown(portable))
+        unavailable = module.build_design_plan(brief, mode="stitch-mcp")
+        self.assertEqual(unavailable["integration"]["status"], "unavailable_use_portable_fallback")
+        self.assertTrue(any(path.endswith("/WIREFRAME.md") for path in unavailable["integration"]["portable_fallback"]))
+        available = module.build_design_plan(brief, mode="stitch-mcp", design_capabilities=["stitch-mcp"])
+        self.assertEqual(available["integration"]["status"], "available_after_confirmation")
+        self.assertTrue(available["integration"]["requires_confirmation"])
+        self.assertEqual(available["side_effects"], [])
 
     def test_known_project_skips_project_selection_question(self):
         module = load_module("upstack_onboarding_known", ROOT / "scripts" / "onboarding.py")

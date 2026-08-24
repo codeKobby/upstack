@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.2.0"
+  version: "1.3.0"
   package: upstack
 ---
 
@@ -24,13 +24,13 @@ Use `scripts/onboarding.py <path> --json` to produce the next question plan. **T
 
 The default is one active decision per turn. Any host with a verified native multi-question tool may use a short precomputed chain before submission. Use `scripts/onboarding.py <path> --question-mode native-multi --host <host-id>` only for a prefix whose later questions are independent of earlier answers, such as focus followed by time budget. Submit only the returned `questions` array. Recompute after submission whenever an answer changes the next question. Never chain intent with source selection, outcome detail with a dependent source question, focus with skill calibration, an external-action approval, or discovery actions with candidate selection. If host capabilities are unknown, use one question per call. OpenCode is one known example of a host with this capability; it is not a special workflow requirement.
 
-Normalize the submitted answers, then choose or compute the next question set. Skip questions that no longer affect the route. Ask only about goal, outcome detail, project/source, focus, time budget, relevant skill confidence, and guidance mode. Ask about a target role only for interview or role-matching requests; ask about GitHub CLI or MCP only when the chosen route needs that capability.
+Normalize the submitted answers, then choose or compute the next question set. Skip questions that no longer affect the route. Ask about goal, outcome detail, **project mode**, **destination**, project brief or source, optional UI-design path, focus, time budget, relevant skill confidence, and guidance mode. Never infer rebuild, scratch, clone, or study-only from the current directory, a repository URL, or a portfolio goal. Ask about a target role only for interview or role-matching requests; ask about GitHub CLI or MCP only when the chosen route needs that capability and a portable fallback exists.
 
 For the initial intent gate, say only:
 
 > What would you like to accomplish first?
 
-Offer intent choices such as **learn how an existing project works**, **prepare for a technical interview**, **build a portfolio project**, **upgrade a specific skill**, or **build or rebuild a real project**. Ask where the project comes from only after the learner chooses an intent that needs a source.
+Offer intent choices such as **learn how an existing project works**, **prepare for a technical interview**, **build a portfolio project**, **upgrade a specific skill**, or **build or rebuild a real project**. After the outcome-specific question, ask whether the learner wants to **rebuild**, **build from scratch**, **clone and adapt**, or **study without changing the source**. Then ask where the project or artifacts should live. If the learner starts in a home directory, editor workspace, or other broad folder, ask for the exact local destination path—do not choose the workspace or a child folder. Resolve and show the path, reject unsafe/broad/nonexistent-parent destinations, and obtain explicit destination confirmation before creating files, scaffolding, cloning, or saving `.upstack/`. For scratch mode, ask for the product/technical brief and UI-design path; for the other modes, ask for the existing source only after destination is explicit.
 
 For a known local project, say:
 
@@ -42,7 +42,7 @@ For public discovery, say:
 
 If the selected stateful workflow has no `.upstack/` state, do not stop with a generic initialization menu. Announce the next user-facing action, complete the relevant onboarding questions, show the draft inventory and first blueprint summary, and ask once before creating `.upstack/`. Preserve the original request and continue it after that confirmation. Stateless previews and read-only discovery can continue without persistent state.
 
-Use `.upstack/` for Upstack state. Do not create, modify, or delete it without the learner’s confirmation.
+Use `.upstack/` for Upstack state. Do not create, modify, or delete it without the learner’s confirmation. A destination selection or resolved-path confirmation is not permission to scaffold, clone, install, execute, create a branch/worktree, or publish; request those side-effect confirmations separately.
 
 ## Commands
 
@@ -72,9 +72,9 @@ Present meaningful choices by **actually invoking** the host’s native question
 
 For a local repository, inspect first and write later. Use `scripts/inventory_repo.py <path> --json` or `--output .upstack/PROJECT_INVENTORY.md`. The helper is read-only and must not execute project code, install packages, load secrets, or modify files.
 
-Follow the progressive interview in `references/onboarding.md`. Ask the learner one relevant question at a time about goal, focus, time, and guidance mode, and ask about technology confidence only after the relevant focus is known. Combine self-report with a short diagnostic when the learner chooses a build or reverse-engineering route: one prediction, one trace, and one small change proposal. Store a skill vector rather than one global beginner/advanced label.
+Follow the progressive interview in `references/onboarding.md`. Ask the learner one relevant question at a time about goal, project mode, destination, focus, time, and guidance mode, and ask about technology confidence only after the relevant focus is known. For every route, map the complete project curriculum first, but generate only the current lesson or stage when requested or unlocked. Combine self-report with a short diagnostic when the learner chooses a build or reverse-engineering route: one prediction, one trace, and one small change proposal. Store a skill vector rather than one global beginner/advanced label.
 
-Draft `PROJECT_INVENTORY.md`, `CONCEPT_MAP.md`, `ARCHITECTURE_MAP.md`, `FOCUS.md`, `REBUILD_BLUEPRINT.md`, and `ROADMAP.md`. Show concise summaries and ask before creating durable `.upstack/` state. Do not pre-generate full lessons, all future solutions, or every stage’s implementation.
+Draft `PROJECT_INVENTORY.md`, `CONCEPT_MAP.md`, `ARCHITECTURE_MAP.md`, `FOCUS.md`, `REBUILD_BLUEPRINT.md`, and `ROADMAP.md`. For scratch graphical projects, also draft `.upstack/design/BRIEF.md`, `.upstack/design/WIREFRAME.md`, and `.upstack/design/DESIGN.md` before the first UI implementation slice. Show concise summaries and ask before creating durable `.upstack/` state. Map the whole curriculum, but do not pre-generate full lessons, all future solutions, or every stage’s implementation.
 
 Create `.upstack/` lazily with:
 
@@ -95,7 +95,11 @@ Create `.upstack/` lazily with:
 ├── decisions/
 ├── candidates/
 ├── source/
-└── cache/
+├── cache/
+└── design/
+   ├── BRIEF.md
+   ├── WIREFRAME.md
+   └── DESIGN.md
 ```
 
 Mark every conclusion as `observed`, `inferred`, or `unknown`, and attach a repository-relative source path, symbol, heading, or test when possible. Never present inference as fact.
@@ -149,9 +153,12 @@ Adapt stage size to concept novelty, integration count, codebase complexity, ope
 Use this progression for a serious project:
 
 ```text
-orient → inventory → trace → runnable foundation → first vertical slice
-→ expansion → hardening → quality → explanation and portfolio
+orient → inventory → trace or product brief → design gate when graphical
+→ runnable foundation → first vertical slice → expansion → hardening
+→ quality → explanation and portfolio
 ```
+
+For a from-scratch graphical project, complete the local design gate before UI implementation: generate `BRIEF.md`, `WIREFRAME.md`, and `DESIGN.md`; review the primary journey and required states; then optionally use a verified callable Stitch MCP for visual exploration. Stitch is an accelerator, not a prerequisite. If used, ask for confirmation before remote project, screen, variant, or design-system writes and preserve approved decisions locally. Use `scripts/ui_design.py` after the learner approves persistence to create the portable artifacts. The helper never calls MCP or uploads data itself.
 
 Each stage must include one observable outcome, relevant concepts and source anchors, public files or interfaces, learner decisions, implementation task, approved checks, proof questions, finish gates, limitations, and the evidence needed to unlock the next stage.
 
@@ -164,7 +171,13 @@ question → locate entrypoint → follow symbols → inspect tests
 
 Allow the learner to choose full-stack, front-end only, backend only, data layer, one feature, one request path, one file, one symbol, or one test. Reveal only the architecture needed for the current stage. Ask the learner to predict the next hop and explain what they changed.
 
-Use modeling, coaching, scaffolding, reflection, and gradual fading. Start with a complete example or trace when needed, then remove support by concept or subgoal. A lesson is exposure; stage evidence requires an attempt, verification, and explanation.
+Use modeling, coaching, scaffolding, reflection, and gradual fading. Start with a complete example or trace when needed, then remove support by concept or subgoal. A lesson is exposure; stage evidence requires an attempt, verification, and explanation. Never reveal all future lesson content in the first response; show the roadmap and generate one current stage at a time.
+
+## Design a project from scratch
+
+When the learner selects **build from scratch**, ask for destination before accepting a brief. Capture the problem, audience, primary outcome, constraints, intended stack, and primary user journey. Generate a portable low-fidelity Markdown wireframe even when a visual tool is available. Use `scripts/ui_design.py <brief.json> --mode portable --write` only after the learner has approved `.upstack/` persistence or the requested artifact destination.
+
+If the current host exposes a verified callable Stitch MCP and the learner chooses it, use the host’s native MCP tool directly rather than printing a pretend design result. Before any remote write, state the provider, exact tool action, project/screen destination, and sanitized data that will be sent, then obtain explicit confirmation. Use only the tools and schema exposed by that MCP. After a design is selected, copy its approved user-flow and design decisions into local `DESIGN.md`; do not make the remote canvas the only source of truth. If Stitch is unavailable, unauthorized, or declined, continue with the Markdown wireframe and design contract.
 
 ## Discover public repositories
 

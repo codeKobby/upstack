@@ -1,6 +1,6 @@
 # Upstack Onboarding Contract
 
-Upstack onboarding is a short adaptive interview, not a questionnaire dump. Its purpose is to collect only the decisions that change the first project route, focus, stage size, or evidence plan.
+Upstack onboarding is a short adaptive interview, not a questionnaire dump. Its purpose is to collect only the decisions that change the first project route, focus, stage size, evidence plan, destination, or design gate.
 
 ## First-run behavior
 
@@ -8,6 +8,9 @@ The agent must begin with the learner’s intent. It must not inspect the curren
 
 After the intent answer, inspect only the context required by that route:
 
+- Is the selected project mode rebuild, scratch, clone, or study-only?
+- Is the selected destination a new local folder, isolated worktree, source-adjacent notes, portfolio repository later, or plan-only?
+- If code or artifacts will be local, what exact folder should hold them, and does its parent exist?
 - Is the selected source a local project, public project, or new-project brief?
 - Is a local path inside a Git repository or a broad workspace?
 - Does the selected project contain recognizable project markers?
@@ -31,9 +34,9 @@ If a specific project path is already provided, announce:
 
 > I’ll inspect that project without running its code, identify the stack and major flows, and show you a draft inventory. I’ll ask before saving your Upstack workspace.
 
-## One question per turn
+## One active decision per turn
 
-When the host exposes a native question or choice tool—such as `AskUserQuestion`, a selectable prompt, or an equivalent—use it. Make one question-tool call per turn with:
+When the host exposes a callable native question or choice tool—such as `AskUserQuestion`, OpenCode’s `question`, a selectable prompt, or an equivalent—**invoke it immediately** after computing the current question. A planner result is not a prompt and must not be printed as a substitute. Send only the current question payload to the native tool, and let that tool render the user-facing interaction. The default is one native-tool call containing one active decision per turn. A host with verified multi-question support may submit a short precomputed chain when all included questions are answer-independent and have no side effects.
 
 - one clear question;
 - two to five mutually understandable options;
@@ -42,9 +45,11 @@ When the host exposes a native question or choice tool—such as `AskUserQuestio
 - no internal command names in labels;
 - no option that silently performs a side effect.
 
-If no native question tool exists, render the same question as a short numbered or lettered list. Do not claim that text options are clickable. Do not print the prose list and then invoke the native question tool; the native question tool output is the only user-facing prompt for that turn.
+If no callable native question tool exists, render the same active question as a short numbered or lettered list. Do not claim that text options are clickable. Do not print the prose list and then invoke the native question tool; native question output is the only user-facing prompt for that turn.
 
-Do not ask all onboarding questions in one message. After each answer, normalize it and choose the next question from the answer. Skip questions that no longer affect the route.
+Use `scripts/onboarding.py <path> --json` as a controller and follow its `delivery` object. For a native host, invoke the named or verified equivalent tool and send only `questions`; for a text-only host, render only the current question. A chain plan is not permission to print a menu or to simulate a tool call. A host with verified multi-question support may use `scripts/onboarding.py <path> --host HOST_ID --question-mode native-multi --json`; the chain may include only a precomputed independent prefix such as focus followed by time budget. Never chain intent with source selection, outcome detail with a dependent source question, skill calibration whose wording depends on the selected focus, external-action approvals, or discovery action and candidate selection. Recompute after answers to any dependent question. If the host’s chaining behavior is unknown, use one question per call.
+
+Do not ask all onboarding questions in one message. After each submitted answer set, normalize the answers and choose or compute the next question. Skip questions that no longer affect the route.
 
 ## Question order
 
@@ -53,12 +58,34 @@ Use this order, with conditional branches:
 | Order | Question | Ask when |
 | ---: | --- | --- |
 | 1 | What would you like to accomplish first? | Always when the request is broad or the learner has not stated a goal. |
-| 2 | Which project or project type should we use? | Only when the chosen goal needs a source and one is not already selected. |
-| 3 | Where should we focus first? | After the goal and source or project type are known. |
-| 4 | How much time should the first stage fit into? | Before creating a staged blueprint or rebuild slice. |
-| 5 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
-| 6 | How should Upstack guide you? | Before choosing scaffold and reveal depth. |
-| 7 | Should I save this plan in `.upstack/`? | After the draft inventory and first blueprint summary are shown. |
+| 2 | What kind of project work should we do? | For project-oriented goals; choose rebuild, scratch, clone-and-adapt, or study-only. |
+| 3 | Where should the project or artifacts live? | Immediately after project mode, before selecting a source or creating files. |
+| 4 | What exact local folder should hold the code or artifacts? | Whenever the destination involves local code, a clone, a worktree, or local notes; especially from a broad workspace. |
+| 5 | Confirm the resolved local destination. | Before creating files, scaffolding, cloning, branch/worktree state, or saving project state. |
+| 6 | What should we build from scratch? | Only for scratch mode when the learner has not supplied a brief. |
+| 7 | Which existing project should we use? | For rebuild, clone, or study mode when a source is not already selected. |
+| 8 | How should we design the user experience? | For a scratch project with a graphical interface; always offer portable Markdown and offer Stitch only when its MCP is verified callable. |
+| 9 | Where should we focus first? | After the project brief/source and design gate are known. |
+| 10 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
+| 11 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
+| 12 | How should Upstack guide you? | Before choosing scaffold and reveal depth. |
+| 13 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
+
+Destination and project mode are distinct decisions. Never infer “clone,” “rebuild,” or “build from scratch” from the current working directory, a repository URL, or a portfolio goal. When the learner starts in a home directory, editor workspace, or other broad folder, ask for the exact local destination path instead of writing into that broad folder or silently selecting one of its children. Resolve relative paths against the stated workspace, reject `/`, the home directory, the broad workspace itself when it has no project markers, files, and paths whose parent does not exist, then show the resolved path. A valid path still requires explicit destination confirmation before any write. A destination choice does not authorize cloning, forking, branch/worktree creation, publishing, or file writes; those remain separate confirmations.
+
+## Complete curriculum, staged lessons
+
+For every project mode, first map the complete project into an ordered curriculum: stages, concepts, source or design anchors, implementation outcomes, checks, proof questions, and finish gates. Do not generate every lesson, code patch, exercise, or assessment at once. Generate only the current stage when the learner requests or unlocks it, and recompute later stages when evidence or project scope changes. The learner may view the roadmap without receiving all lesson content.
+
+A scratch project uses this design gate before UI implementation:
+
+1. Create `.upstack/design/BRIEF.md` with the product problem, audience, primary outcome, constraints, and intended stack.
+2. Create `.upstack/design/WIREFRAME.md` with the primary user journey, screen responsibilities, screen states, and low-fidelity Markdown wireframes.
+3. Create `.upstack/design/DESIGN.md` as the portable design contract for approved tokens, accessibility assumptions, responsive behavior, and component decisions.
+4. If the learner chooses Stitch and a verified Stitch MCP is callable, announce the external design action and ask for confirmation before creating or changing remote design data. Use the MCP to create or inspect a Stitch project, generate or edit screens, generate variants, or manage a design system only within the tool’s exposed schema. Preserve learner-approved decisions in the local design contract.
+5. If Stitch is unavailable, unauthenticated, not permitted, or declined, continue with the Markdown artifacts. Do not block the apprenticeship on a design connector.
+
+The portable Markdown wireframe is not a disposable fallback. It is the minimum source of truth across coding agents and remains alongside any visual design. Do not send private source code, secrets, personal data, or unreviewed repository content to a remote design service without explicit approval.
 
 Do not ask for a target role unless the learner chooses role matching, mentions a job, or requests portfolio alignment. Do not ask about GitHub CLI unless the learner chooses public discovery or authenticated source preparation. Do not ask about MCP configuration unless a relevant capability would improve the chosen route and a fallback is available.
 
@@ -70,15 +97,19 @@ First ask, without inspecting the workspace:
 
 > What would you like to accomplish first?
 
-Offer the intent options above. After “Learn how an existing project works,” “Prepare for a technical interview,” “Build a portfolio project,” “Upgrade a specific skill,” or “Build or rebuild a real project,” ask the next outcome-specific question. Only then ask where the project or practice material should come from. This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
+Offer the intent options above. After the outcome-specific question, ask the project mode and destination before asking for a source. If the route uses local code or artifacts, collect and confirm the exact destination path before selecting a source or creating files. For a scratch build, ask for the brief and UI-design path; for rebuild, clone, or study-only, ask for the existing source. This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
 
 ### Known local repository
 
-Still ask the same intent question first. Do not assume that opening a repository means the learner wants to study it. After the learner chooses an intent, offer **use the current project** as one possible source alongside another local project, public discovery, or no repository when the selected goal supports that option. Then ask focus, time budget, relevant skill confidence, and guidance mode.
+Still ask the same intent question first. Do not assume that opening a repository means the learner wants to study it. After the learner chooses an intent and outcome, ask project mode and destination. Only then offer **use the current project** as one possible reference/source alongside another local project, public discovery, or a scratch brief when the selected mode supports it. Then ask focus, time budget, relevant skill confidence, and guidance mode.
 
 ### Public discovery
 
-Ask project type before skill level, because the relevant skill vector depends on the target. Then ask focus and time budget. Read metadata first. Only after the top candidates are enriched and displayed should the learner choose a candidate. Fork, clone, install, and execution are later separate confirmations.
+Ask project mode and destination before source discovery. For clone-and-adapt, ask which public or local reference to use, enrich public candidates, and show the exact clone destination only after the candidate is chosen. Read metadata first. Only after the top candidates are enriched and displayed should the learner choose a candidate. Fork, clone, install, and execution are later separate confirmations.
+
+### Build from scratch
+
+Ask for the destination category and exact local path before accepting a project brief. Build the complete curriculum map first, then ask for a brief and UI-design path. Always generate the portable Markdown brief, wireframe, and design contract as the local design gate. Offer a Stitch MCP path only when the current host exposes a verified callable Stitch capability; never auto-configure it or make it a prerequisite.
 
 ## Persistence and resumption
 

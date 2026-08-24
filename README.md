@@ -63,7 +63,7 @@ When you run `/upstack`, Upstack first captures your intended outcome before ins
 
 > What would you like to accomplish first?
 
-It offers choices such as learning how an existing project works, preparing for a technical interview, building a portfolio project, upgrading a specific skill, or building or rebuilding a real project. Only after your intent is known does it ask where the project or practice material should come from. After each answer, it asks only the next question that changes the plan. For example, interview preparation asks for the target role before source selection, while a project rebuild asks what kind of rebuild you want before asking for a repository.
+It offers choices such as learning how an existing project works, preparing for a technical interview, building a portfolio project, upgrading a specific skill, or building or rebuilding a real project. After the outcome-specific question, it separately asks whether you want to rebuild, build from scratch, clone and adapt, or study without changing the source. It then asks where the project or artifacts should live before selecting a source or creating files. After each answer, it asks only the next question that changes the plan.
 
 The agent should **invoke** a callable native question tool or selectable prompt when the host provides one. The planner’s JSON is not the user-facing prompt: the agent must send only its `questions` payload to the native tool immediately, and must not merely print the plan, simulate the tool, or print a prose list and then repeat it in the question UI. In text-only hosts, it shows the same choices as a short numbered list and does not claim that the list is clickable. Fork, clone, install, execution, and persistent state remain separate confirmations.
 
@@ -90,7 +90,11 @@ A local initialization creates a learner-owned `.upstack/` directory:
 ├── decisions/
 ├── candidates/
 ├── source/
-└── cache/
+├── cache/
+└── design/
+   ├── BRIEF.md
+   ├── WIREFRAME.md
+   └── DESIGN.md
 ```
 
 `PROJECT_INVENTORY.md` is the ingredients list: runtime, language, frameworks, libraries, database, routes, modules, data flows, tests, CI, deployment, security boundaries, and unknowns. `REBUILD_BLUEPRINT.md` is the recipe: a sequence of small stages with outcomes, decisions, acceptance checks, proof questions, finish gates, limitations, and the evidence needed to unlock the next stage.
@@ -121,7 +125,21 @@ orient → inventory → trace → runnable foundation → first vertical slice
 → expansion → hardening → quality → explanation and portfolio
 ```
 
-The assistant uses modeling, coaching, targeted scaffolding, reflection, and gradual fading. It should not generate the full implementation or every future lesson at once.
+The assistant uses modeling, coaching, targeted scaffolding, reflection, and gradual fading. It first maps the complete project curriculum and evidence gates, but generates only the current lesson or stage when requested or unlocked. It should not generate the full implementation or every future lesson at once.
+
+### Destination and project mode
+
+Upstack never assumes that the opened repository is the destination or that a repository URL means “clone.” The learner explicitly chooses a project mode—**rebuild**, **build from scratch**, **clone and adapt**, or **study-only**—and then chooses a destination such as a new local folder, isolated worktree, source-adjacent notes, portfolio repository later, or plan-only. When starting from a bare editor workspace or home directory, the learner must provide the exact local folder where code or artifacts should live. Upstack resolves relative paths against that workspace, rejects the broad workspace itself when it is not a project, rejects `/`, the home directory, files, and missing-parent paths, shows the resolved destination, and asks for confirmation before writing. Clone, fork, branch/worktree creation, install, execution, and publishing remain separate confirmations.
+
+### Build from scratch and design
+
+A from-scratch graphical build starts with a design gate before the first UI implementation slice. Upstack creates portable `.upstack/design/BRIEF.md`, `.upstack/design/WIREFRAME.md`, and `.upstack/design/DESIGN.md`. The wireframe is a low-fidelity Markdown artifact containing the user journey, screen responsibilities, primary actions, and loading/empty/error/success states, so it works in every coding agent.
+
+If the active host exposes a verified callable Stitch MCP and the learner chooses it, Upstack may use Stitch for visual exploration, screen generation, editing, variants, and design-system work. It must announce what will be sent and ask before remote writes, then copy approved decisions into the local design contract. Stitch is an optional accelerator, not a prerequisite, and Upstack continues with Markdown when the MCP is unavailable, unauthenticated, denied, or declined. The deterministic helper is:
+
+```bash
+python3 scripts/ui_design.py /path/to/brief.json --mode portable --write
+```
 
 ## Public project discovery
 
@@ -170,7 +188,7 @@ Upstack uses a capability ladder:
 | GitHub CLI | Authenticated metadata search, remote README/root reads, fork, and clone. | Optional; preferred for authenticated GitHub actions. |
 | GitHub REST API | Public metadata, README, and directory/content reads. | Optional fallback. |
 | Web search | Broader public discovery and documentation cross-checking. | Optional fallback. |
-| MCP connector | Provider-specific repositories, docs, issues, diagrams, or job sources. | Optional accelerator only. |
+| MCP connector | Provider-specific repositories, docs, issues, diagrams, job sources, or optional Stitch design exploration. | Optional accelerator only. |
 
 Upstack detects whether `git`, `gh`, and authentication are available. If `gh` is absent, it explains how to install it or continues with public API/web discovery. It never requires an MCP to work locally and does not enable or create connectors automatically.
 
@@ -178,7 +196,7 @@ Upstack detects whether `git`, `gh`, and authentication are available. If `gh` i
 
 Fork, clone, install, execute, create a branch, commit, push, open a pull request, merge, and publish are separate confirmations. Before each side effect, Upstack shows the exact command, destination, remote effect, and expected files.
 
-It treats README files, package manifests, scripts, CI, issue text, and source code as untrusted data. It does not automatically run postinstall hooks, migrations, containers, deployment commands, arbitrary scripts, or network operations. It prefers a temporary copy or isolated worktree, documented checks, bounded output, and captured evidence. It redacts secrets and labels inherited or adapted code honestly.
+It treats README files, package manifests, scripts, CI, issue text, and source code as untrusted data. It does not automatically run postinstall hooks, migrations, containers, deployment commands, arbitrary scripts, or network operations. It prefers a temporary copy or isolated worktree, documented checks, bounded output, and captured evidence. It redacts secrets and labels inherited or adapted code honestly. Remote design writes through Stitch are also separate confirmations, and private source code, secrets, personal data, and unreviewed repository content are never sent without explicit approval.
 
 ## Overflow integration
 
@@ -204,6 +222,7 @@ python3 scripts/inventory_repo.py /path/to/repository --output /tmp/inventory.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output /tmp/candidates.json
 python3 scripts/discover_projects.py "serious TypeScript project for backend interview practice" --stack TypeScript --focus "backend APIs" --signal "backend depth" --output /tmp/cross-source.json
 python3 scripts/onboarding.py . --host <host-id> --question-mode native-multi --json
+python3 scripts/ui_design.py /path/to/brief.json --mode portable --write
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 

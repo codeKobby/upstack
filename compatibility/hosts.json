@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -11,6 +11,13 @@
     "send_only": "question_plan.questions",
     "fallback": "recompute-and-submit-one-question-after-each-answer",
     "native_examples": {"opencode": "question", "claude-code": "AskUserQuestion"}
+  },
+  "design_policy": {
+    "portable_artifacts": [".upstack/design/BRIEF.md", ".upstack/design/WIREFRAME.md", ".upstack/design/DESIGN.md"],
+    "stitch": "offer-only-when-verified-callable",
+    "remote_writes": "explicit-confirmation-required",
+    "fallback": "portable-markdown-wireframe-and-design-contract",
+    "planner": "scripts/ui_design.py BRIEF_JSON --mode portable --write"
   },
   "companion_installation": {
     "planner": "scripts/install_video_companion.py --host HOST_ID --json",
