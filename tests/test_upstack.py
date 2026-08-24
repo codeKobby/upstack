@@ -344,7 +344,9 @@ class OnboardingTests(unittest.TestCase):
             module.main()
         payload = json.loads(output.getvalue())
         self.assertTrue(payload["context"]["inspection_deferred"])
-        self.assertEqual(payload["next_question"]["id"], "goal")
+        self.assertEqual([item["id"] for item in payload["question_plan"]["questions"]], ["goal"])
+        self.assertEqual(payload["question_plan"]["delivery"]["required_action"], "invoke_native_question_tool_if_callable")
+        self.assertEqual(payload["question_plan"]["delivery"]["send_only"], "questions")
 
     def test_intent_is_asked_before_source_selection(self):
         module = load_module("upstack_onboarding_intent_first", ROOT / "scripts" / "onboarding.py")
@@ -400,6 +402,17 @@ class OnboardingTests(unittest.TestCase):
         plan = module.question_plan(None, {}, host="generic")
         self.assertEqual(plan["mode"], "native-single-question-or-text-fallback")
         self.assertEqual([item["id"] for item in plan["questions"]], ["goal"])
+        self.assertEqual(plan["delivery"]["native_tool"], "discover_from_current_host_tools")
+        self.assertTrue(plan["delivery"]["prose_prompt_allowed"])
+
+    def test_native_host_plan_requires_tool_invocation_without_duplicate_prose(self):
+        module = load_module("upstack_onboarding_native_delivery", ROOT / "scripts" / "onboarding.py")
+        plan = module.question_plan(None, {}, host="opencode")
+        self.assertEqual(plan["delivery"]["native_tool"], "question")
+        self.assertFalse(plan["delivery"]["prose_prompt_allowed"])
+        self.assertEqual(plan["delivery"]["send_only"], "questions")
+        self.assertIn("print-question-specification-as-prompt", plan["delivery"]["must_not"])
+        self.assertIn("simulate-native-tool", plan["delivery"]["must_not"])
 
     def test_question_sequence_adapts_to_discovery_answers(self):
         module = load_module("upstack_onboarding_sequence", ROOT / "scripts" / "onboarding.py")

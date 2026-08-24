@@ -386,18 +386,26 @@ def question_plan(
         raise ValueError(f"unsupported question mode: {question_mode}")
     use_chain = question_mode == "native-multi" or (question_mode == "auto" and host == "opencode")
     if use_chain:
-        return {
-            "host": host,
-            "mode": "native-multi-question-when-safe",
-            "questions": question_chain(ctx, answers),
-            "safety": "Only the returned questions may be sent to the native question tool; recompute after dependent answers.",
-        }
-    current = next_question(ctx, answers)
+        mode = "native-multi-question-when-safe"
+        questions = question_chain(ctx, answers)
+    else:
+        mode = "native-single-question-or-text-fallback"
+        current = next_question(ctx, answers)
+        questions = [current] if current else []
+    native_tool = {"opencode": "question", "claude-code": "AskUserQuestion"}.get(host)
     return {
         "host": host,
-        "mode": "native-single-question-or-text-fallback",
-        "questions": [current] if current else [],
-        "safety": "Only the returned question may be shown for this turn.",
+        "mode": mode,
+        "questions": questions,
+        "delivery": {
+            "required_action": "invoke_native_question_tool_if_callable",
+            "native_tool": native_tool or "discover_from_current_host_tools",
+            "send_only": "questions",
+            "prose_prompt_allowed": native_tool is None,
+            "fallback": "render_one_short_question_only_when_no_callable_native_tool_exists",
+            "must_not": ["print-question-specification-as-prompt", "simulate-native-tool", "duplicate-native-prompt"],
+        },
+        "safety": "The planner is not the UI. Invoke the callable native question tool immediately when available; do not print a duplicate prose prompt. Recompute after dependent answers.",
     }
 
 
@@ -419,10 +427,7 @@ def main() -> int:
         ctx = intent_context()
     if args.chain:
         args.question_mode = "native-multi"
-    if args.chain or args.question_mode != "auto":
-        payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host, question_mode=args.question_mode)}
-    else:
-        payload = {"context": ctx, "next_question": next_question(ctx, answers)}
+    payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host, question_mode=args.question_mode)}
     print(json.dumps(payload, indent=2))
     return 0
 

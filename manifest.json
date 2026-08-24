@@ -1,6 +1,6 @@
 {
   "name": "upstack",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, public GitHub discovery, and honest portfolio evidence.",
   "skills": ["upstack"],
   "agents": [

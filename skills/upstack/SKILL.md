@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.0.1"
+  version: "1.2.0"
   package: upstack
 ---
 
@@ -20,7 +20,7 @@ The first intent question should distinguish outcomes such as **learning how an 
 
 After intent is known, distinguish a **selected project** from a broad workspace. A home directory, monorepo parent, downloads folder, or editor workspace containing several folders is not itself a project. Never summarize the agent’s home directory as the learner’s repository and never silently choose a child folder.
 
-Use `scripts/onboarding.py <path> --json` to plan the next relevant question. If the host exposes a native question or choice tool, send only the returned question to that tool and let it render the prompt. Do not also print a prose preamble or duplicate numbered list. If no native question tool exists, render the specification as a short numbered or lettered list and do not call it clickable.
+Use `scripts/onboarding.py <path> --json` to produce the next question plan. **The planner is not the question UI.** Immediately inspect the current callable tool set or verified host capability, then invoke the matching native question tool with only the returned `questions` payload. For OpenCode, call its `question` tool; for another host, call its verified native equivalent. Do not stop after printing the JSON, do not ask the model to simulate the tool, and do not print a prose preamble or duplicate numbered list when a native tool is callable. If no callable native question tool exists, render the single returned question as a short numbered or lettered list and do not call it clickable.
 
 The default is one active decision per turn. Any host with a verified native multi-question tool may use a short precomputed chain before submission. Use `scripts/onboarding.py <path> --question-mode native-multi --host <host-id>` only for a prefix whose later questions are independent of earlier answers, such as focus followed by time budget. Submit only the returned `questions` array. Recompute after submission whenever an answer changes the next question. Never chain intent with source selection, outcome detail with a dependent source question, focus with skill calibration, an external-action approval, or discovery actions with candidate selection. If host capabilities are unknown, use one question per call. OpenCode is one known example of a host with this capability; it is not a special workflow requirement.
 
@@ -66,7 +66,7 @@ Use `.upstack/` for Upstack state. Do not create, modify, or delete it without t
 | `/upstack status` | Show active project, focus, stage, evidence, uncertainty, and next action. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 
-Present meaningful choices through the host’s native question tool when available, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable. Keep action choices and object choices separate: never show an action menu and a candidate-number menu in the same turn, and interpret numeric replies only within the active question.
+Present meaningful choices by **actually invoking** the host’s native question tool when it is callable, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. A returned `next_question` or `question_plan` is an instruction to make that tool call, not user-facing content. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable. Keep action choices and object choices separate: never show an action menu and a candidate-number menu in the same turn, and interpret numeric replies only within the active question.
 
 ## Initialize the project apprenticeship
 

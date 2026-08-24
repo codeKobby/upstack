@@ -33,7 +33,7 @@ If a specific project path is already provided, announce:
 
 ## One active decision per turn
 
-When the host exposes a native question or choice tool—such as `AskUserQuestion`, a selectable prompt, or an equivalent—use it. The default is one question-tool call containing one active decision per turn. OpenCode is an explicit capability exception: its native `question` tool can display multiple questions before the learner submits, so Upstack may submit a short precomputed chain when all included questions are answer-independent and have no side effects.
+When the host exposes a callable native question or choice tool—such as `AskUserQuestion`, OpenCode’s `question`, a selectable prompt, or an equivalent—**invoke it immediately** after computing the current question. A planner result is not a prompt and must not be printed as a substitute. Send only the current question payload to the native tool, and let that tool render the user-facing interaction. The default is one native-tool call containing one active decision per turn. A host with verified multi-question support may submit a short precomputed chain when all included questions are answer-independent and have no side effects.
 
 - one clear question;
 - two to five mutually understandable options;
@@ -42,9 +42,9 @@ When the host exposes a native question or choice tool—such as `AskUserQuestio
 - no internal command names in labels;
 - no option that silently performs a side effect.
 
-If no native question tool exists, render the same active question as a short numbered or lettered list. Do not claim that text options are clickable. Do not print the prose list and then invoke the native question tool; native question output is the only user-facing prompt for that turn.
+If no callable native question tool exists, render the same active question as a short numbered or lettered list. Do not claim that text options are clickable. Do not print the prose list and then invoke the native question tool; native question output is the only user-facing prompt for that turn.
 
-For OpenCode, use `scripts/onboarding.py <path> --host opencode --chain` when a chain is safe. The chain may include only a precomputed independent prefix such as focus followed by time budget. Never chain intent with source selection, outcome detail with a dependent source question, skill calibration whose wording depends on the selected focus, external-action approvals, or discovery action and candidate selection. Recompute after answers to any dependent question. If the host’s chaining behavior is unknown, use one question per call.
+Use `scripts/onboarding.py <path> --json` as a controller and follow its `delivery` object. For a native host, invoke the named or verified equivalent tool and send only `questions`; for a text-only host, render only the current question. A chain plan is not permission to print a menu or to simulate a tool call. A host with verified multi-question support may use `scripts/onboarding.py <path> --host HOST_ID --question-mode native-multi --json`; the chain may include only a precomputed independent prefix such as focus followed by time budget. Never chain intent with source selection, outcome detail with a dependent source question, skill calibration whose wording depends on the selected focus, external-action approvals, or discovery action and candidate selection. Recompute after answers to any dependent question. If the host’s chaining behavior is unknown, use one question per call.
 
 Do not ask all onboarding questions in one message. After each submitted answer set, normalize the answers and choose or compute the next question. Skip questions that no longer affect the route.
 

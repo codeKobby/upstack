@@ -1,13 +1,16 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
     "multi_question": "use-only-when-native-host-capability-is-verified",
     "planner": "scripts/onboarding.py --host HOST_ID --question-mode native-multi",
-    "fallback": "recompute-and-submit-one-question-after-each-answer"
+    "dispatch": "invoke-callable-native-question-tool-immediately; planner-output-is-not-user-facing",
+    "send_only": "question_plan.questions",
+    "fallback": "recompute-and-submit-one-question-after-each-answer",
+    "native_examples": {"opencode": "question", "claude-code": "AskUserQuestion"}
   },
   "companion_installation": {
     "planner": "scripts/install_video_companion.py --host HOST_ID --json",
