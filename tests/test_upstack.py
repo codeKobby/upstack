@@ -18,6 +18,7 @@ INVENTORY = ROOT / "scripts" / "inventory_repo.py"
 DISCOVERY = ROOT / "scripts" / "discover_github.py"
 DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
 DISCOVERY_PROJECTS = ROOT / "scripts" / "discover_projects.py"
+HOST_MATRIX = ROOT / "compatibility" / "hosts.json"
 
 
 def load_module(name: str, path: Path):
@@ -290,6 +291,26 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in plan["questions"]], ["focus", "time_budget"])
         self.assertNotIn("skill_profile", [item["id"] for item in plan["questions"]])
         self.assertNotIn("source", [item["id"] for item in plan["questions"]])
+
+    def test_host_matrix_declares_capability_neutral_question_policy(self):
+        matrix = json.loads(HOST_MATRIX.read_text(encoding="utf-8"))
+        self.assertEqual(matrix["question_policy"]["default"], "single-question")
+        self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
+        self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
+        self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
+
+    def test_verified_native_multi_capability_is_host_neutral(self):
+        module = load_module("upstack_onboarding_host_neutral", ROOT / "scripts" / "onboarding.py")
+        answers = {"goal": "rebuild", "outcome_detail": "existing", "source": "discover", "source_detail": "frontend"}
+        plan = module.question_plan(None, answers, host="claude-code", question_mode="native-multi")
+        self.assertEqual(plan["mode"], "native-multi-question-when-safe")
+        self.assertEqual([item["id"] for item in plan["questions"]], ["focus", "time_budget"])
+
+    def test_unknown_host_defaults_to_single_question(self):
+        module = load_module("upstack_onboarding_unknown_host", ROOT / "scripts" / "onboarding.py")
+        plan = module.question_plan(None, {}, host="some-agent", question_mode="auto")
+        self.assertEqual(plan["mode"], "native-single-question-or-text-fallback")
+        self.assertEqual([item["id"] for item in plan["questions"]], ["goal"])
 
     def test_opencode_does_not_chain_intent_or_discovery_source_questions(self):
         module = load_module("upstack_onboarding_chain_boundaries", ROOT / "scripts" / "onboarding.py")

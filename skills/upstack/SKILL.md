@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "0.5.0"
+  version: "0.6.0"
   package: upstack
 ---
 
@@ -22,7 +22,7 @@ After intent is known, distinguish a **selected project** from a broad workspace
 
 Use `scripts/onboarding.py <path> --json` to plan the next relevant question. If the host exposes a native question or choice tool, send only the returned question to that tool and let it render the prompt. Do not also print a prose preamble or duplicate numbered list. If no native question tool exists, render the specification as a short numbered or lettered list and do not call it clickable.
 
-The default is one active decision per turn. OpenCode is a supported exception because its native `question` tool can display multiple questions before submission. When the host is OpenCode, use `scripts/onboarding.py <path> --host opencode --chain` only for a short precomputed prefix whose later questions are independent of earlier answers, such as focus followed by time budget. Submit only the returned `questions` array. Recompute after submission whenever an answer changes the next question. Never chain intent with source selection, outcome detail with a dependent source question, focus with skill calibration, an external-action approval, or discovery actions with candidate selection. If host capabilities are unknown, use one question per call.
+The default is one active decision per turn. Any host with a verified native multi-question tool may use a short precomputed chain before submission. Use `scripts/onboarding.py <path> --question-mode native-multi --host <host-id>` only for a prefix whose later questions are independent of earlier answers, such as focus followed by time budget. Submit only the returned `questions` array. Recompute after submission whenever an answer changes the next question. Never chain intent with source selection, outcome detail with a dependent source question, focus with skill calibration, an external-action approval, or discovery actions with candidate selection. If host capabilities are unknown, use one question per call. OpenCode is one known example of a host with this capability; it is not a special workflow requirement.
 
 Normalize the submitted answers, then choose or compute the next question set. Skip questions that no longer affect the route. Ask only about goal, outcome detail, project/source, focus, time budget, relevant skill confidence, and guidance mode. Ask about a target role only for interview or role-matching requests; ask about GitHub CLI or MCP only when the chosen route needs that capability.
 
@@ -234,11 +234,13 @@ Do not silently overwrite `.learning/` or `.upstack/`. Link artifacts by relativ
 
 Run bundled helpers with `--help` first when available:
 
-For OpenCode question chaining, use the host-aware planner only when the native `question` tool is available:
+For a host with verified native multi-question support, use the capability-driven planner only when that native question tool is available:
 
 ```bash
-python3 scripts/onboarding.py . --host opencode --chain --json
+python3 scripts/onboarding.py . --host <host-id> --question-mode native-multi --json
 ```
+
+The legacy `--chain` flag remains an alias for `--question-mode native-multi`.
 
 ```bash
 python3 scripts/check_capabilities.py --json

@@ -27,7 +27,7 @@ npx skills add codeKobby/upstack --all \
 | B — installer-routed | Cursor, Factory Droid, Kiro, Slate, Hermes | Install through the open installer or host-specific route and verify current placement. |
 | C — bridge | OpenClaw, GBrain | Use a bridge or provider-specific integration; do not imply native portable support. |
 
-Every host should preserve `/upstack` or its equivalent explicit skill command. The first turn must capture the learner’s intended outcome before inspecting the current folder, repository, files, stack, or home-directory contents. If the request is ambiguous, ask one intent question through the host’s native question UI when available. After the answer, identify whether the selected source is a project or broad workspace, announce the route, adapt the next question, and ask before writing `.upstack/`. It should not expose internal initializer commands.
+Every host should preserve `/upstack` or its equivalent explicit skill command. The first turn must capture the learner’s intended outcome before inspecting the current folder, repository, files, stack, or home-directory contents. If the request is ambiguous, ask one intent question through the host’s native question UI when available. After the answer, identify whether the selected source is a project or broad workspace, announce the route, adapt the next question, and ask before writing `.upstack/`. It should not expose internal initializer commands. If a host verifies support for submitting multiple native questions together, Upstack may use a short safe chain; otherwise it uses one question call at a time.
 
 ## Integration capabilities
 
@@ -53,7 +53,7 @@ Hosts must preserve the following boundaries:
 - `.upstack/` remains repository-local and is not mixed with host configuration.
 - Learner choices use the host’s native question tool or selectable UI where supported; text-only hosts use short numbered or lettered lists without claiming they are clickable.
 - Onboarding asks the learner’s intent before source or folder questions, then asks only questions that change goal, source, focus, stage size, guidance depth, or an external-action decision, and skips questions already answered.
-- OpenCode may receive a short chained native-question plan because its built-in `question` tool supports multiple questions before submission. Upstack chains only answer-independent questions, such as focus followed by time budget; it recomputes after dependent answers. Other hosts use one question per call unless their native capability is verified.
+- Hosts with verified multi-question support may receive a short chained native-question plan. Upstack chains only answer-independent questions, such as focus followed by time budget; it recomputes after dependent answers. Hosts without verified support use one question per call. OpenCode is one supported example, not a special requirement.
 - A native question tool is the only user-facing prompt for that turn; the agent must not print a duplicate prose list or expose controller metadata such as route reasons. For a chained native call, the returned question set is the only prompt; do not add prose questions before or after it.
 - Source provenance distinguishes `observed`, `inferred`, and `unknown`.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.

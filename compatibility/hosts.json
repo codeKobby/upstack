@@ -1,8 +1,14 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
+  "question_policy": {
+    "default": "single-question",
+    "multi_question": "use-only-when-native-host-capability-is-verified",
+    "planner": "scripts/onboarding.py --host HOST_ID --question-mode native-multi",
+    "fallback": "recompute-and-submit-one-question-after-each-answer"
+  },
   "hosts": [
     {
       "id": "claude-code",
@@ -44,7 +50,7 @@
         "supports_multiple_questions": true,
         "supports_custom_answers": true,
         "conditional_chaining": "recompute-between-submissions",
-        "upstack_planner": "scripts/onboarding.py --host opencode --chain"
+        "upstack_planner": "scripts/onboarding.py --host HOST_ID --question-mode native-multi"
       },
       "install": ["npx skills add codeKobby/upstack --all -a opencode"]
     },

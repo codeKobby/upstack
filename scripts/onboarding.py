@@ -374,11 +374,20 @@ def question_chain(ctx: dict[str, Any] | None, answers: dict[str, Any], *, max_q
     return chain
 
 
-def question_plan(ctx: dict[str, Any] | None, answers: dict[str, Any], *, host: str = "generic") -> dict[str, Any]:
-    """Build the host delivery plan without exposing controller metadata to learners."""
-    if host == "opencode":
+def question_plan(
+    ctx: dict[str, Any] | None,
+    answers: dict[str, Any],
+    *,
+    host: str = "generic",
+    question_mode: str = "auto",
+) -> dict[str, Any]:
+    """Build a host-neutral delivery plan from verified question capabilities."""
+    if question_mode not in {"auto", "native-single", "native-multi"}:
+        raise ValueError(f"unsupported question mode: {question_mode}")
+    use_chain = question_mode == "native-multi" or (question_mode == "auto" and host == "opencode")
+    if use_chain:
         return {
-            "host": "opencode",
+            "host": host,
             "mode": "native-multi-question-when-safe",
             "questions": question_chain(ctx, answers),
             "safety": "Only the returned questions may be sent to the native question tool; recompute after dependent answers.",
@@ -397,8 +406,9 @@ def main() -> int:
     parser.add_argument("path", nargs="?", type=Path, default=Path.cwd())
     parser.add_argument("--answers", type=Path, help="JSON file containing normalized answers")
     parser.add_argument("--json", action="store_true", help="emit JSON")
-    parser.add_argument("--host", choices=("generic", "opencode"), default="generic", help="host interaction capabilities")
-    parser.add_argument("--chain", action="store_true", help="emit a short host-aware question plan instead of one question")
+    parser.add_argument("--host", default="generic", help="host identifier for provenance; capability is selected separately")
+    parser.add_argument("--question-mode", choices=("auto", "native-single", "native-multi"), default="auto", help="verified host question capability")
+    parser.add_argument("--chain", action="store_true", help="deprecated alias for --question-mode native-multi")
     args = parser.parse_args()
     answers: dict[str, Any] = {}
     if args.answers:
@@ -408,7 +418,9 @@ def main() -> int:
     else:
         ctx = intent_context()
     if args.chain:
-        payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host)}
+        args.question_mode = "native-multi"
+    if args.chain or args.question_mode != "auto":
+        payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host, question_mode=args.question_mode)}
     else:
         payload = {"context": ctx, "next_question": next_question(ctx, answers)}
     print(json.dumps(payload, indent=2))
