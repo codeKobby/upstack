@@ -20,9 +20,11 @@ The first intent question should distinguish outcomes such as **learning how an 
 
 After intent is known, distinguish a **selected project** from a broad workspace. A home directory, monorepo parent, downloads folder, or editor workspace containing several folders is not itself a project. Never summarize the agent’s home directory as the learner’s repository and never silently choose a child folder.
 
-Use `scripts/onboarding.py <path> --json` to plan one relevant question. If the host exposes a native question or choice tool, send that specification to the native tool and let it render the question. Do not also print a prose preamble or duplicate numbered list. If no native question tool exists, render the specification as a short numbered or lettered list and do not call it clickable.
+Use `scripts/onboarding.py <path> --json` to plan the next relevant question. If the host exposes a native question or choice tool, send only the returned question to that tool and let it render the prompt. Do not also print a prose preamble or duplicate numbered list. If no native question tool exists, render the specification as a short numbered or lettered list and do not call it clickable.
 
-Ask **one question at a time**. Normalize the answer, then use it to choose the next question. Skip questions that no longer affect the route. Ask only about goal, outcome detail, project/source, focus, time budget, relevant skill confidence, and guidance mode. Ask about a target role only for interview or role-matching requests; ask about GitHub CLI or MCP only when the chosen route needs that capability.
+The default is one active decision per turn. OpenCode is a supported exception because its native `question` tool can display multiple questions before submission. When the host is OpenCode, use `scripts/onboarding.py <path> --host opencode --chain` only for a short precomputed prefix whose later questions are independent of earlier answers, such as focus followed by time budget. Submit only the returned `questions` array. Recompute after submission whenever an answer changes the next question. Never chain intent with source selection, outcome detail with a dependent source question, focus with skill calibration, an external-action approval, or discovery actions with candidate selection. If host capabilities are unknown, use one question per call.
+
+Normalize the submitted answers, then choose or compute the next question set. Skip questions that no longer affect the route. Ask only about goal, outcome detail, project/source, focus, time budget, relevant skill confidence, and guidance mode. Ask about a target role only for interview or role-matching requests; ask about GitHub CLI or MCP only when the chosen route needs that capability.
 
 For the initial intent gate, say only:
 
@@ -228,6 +230,12 @@ Do not silently overwrite `.learning/` or `.upstack/`. Link artifacts by relativ
 ## Deterministic helpers
 
 Run bundled helpers with `--help` first when available:
+
+For OpenCode question chaining, use the host-aware planner only when the native `question` tool is available:
+
+```bash
+python3 scripts/onboarding.py . --host opencode --chain --json
+```
 
 ```bash
 python3 scripts/check_capabilities.py --json

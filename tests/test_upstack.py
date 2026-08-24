@@ -201,6 +201,33 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual(module.next_question(None, {"goal": "rebuild"})["id"], "outcome_detail")
         self.assertEqual(module.next_question(None, {"goal": "interview"})["id"], "outcome_detail")
 
+    def test_opencode_chains_only_answer_independent_questions(self):
+        module = load_module("upstack_onboarding_chain", ROOT / "scripts" / "onboarding.py")
+        answers = {
+            "goal": "rebuild",
+            "outcome_detail": "existing",
+            "source": "discover",
+            "source_detail": "frontend",
+        }
+        plan = module.question_plan(None, answers, host="opencode")
+        self.assertEqual(plan["mode"], "native-multi-question-when-safe")
+        self.assertEqual([item["id"] for item in plan["questions"]], ["focus", "time_budget"])
+        self.assertNotIn("skill_profile", [item["id"] for item in plan["questions"]])
+        self.assertNotIn("source", [item["id"] for item in plan["questions"]])
+
+    def test_opencode_does_not_chain_intent_or_discovery_source_questions(self):
+        module = load_module("upstack_onboarding_chain_boundaries", ROOT / "scripts" / "onboarding.py")
+        intent_plan = module.question_plan(None, {}, host="opencode")
+        self.assertEqual([item["id"] for item in intent_plan["questions"]], ["goal"])
+        source_plan = module.question_plan(None, {"goal": "rebuild", "outcome_detail": "existing"}, host="opencode")
+        self.assertEqual([item["id"] for item in source_plan["questions"]], ["source"])
+
+    def test_generic_host_keeps_one_question_fallback(self):
+        module = load_module("upstack_onboarding_generic_plan", ROOT / "scripts" / "onboarding.py")
+        plan = module.question_plan(None, {}, host="generic")
+        self.assertEqual(plan["mode"], "native-single-question-or-text-fallback")
+        self.assertEqual([item["id"] for item in plan["questions"]], ["goal"])
+
     def test_question_sequence_adapts_to_discovery_answers(self):
         module = load_module("upstack_onboarding_sequence", ROOT / "scripts" / "onboarding.py")
         report = module.context(Path.cwd())

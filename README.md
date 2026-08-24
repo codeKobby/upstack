@@ -67,6 +67,8 @@ It offers choices such as learning how an existing project works, preparing for 
 
 The agent should use a native question tool or selectable prompt when the host provides one. The native question output must be the only user-facing prompt for that turn; the agent must not print a prose list and then repeat it in the question UI. In text-only hosts, it shows the same choices as a short numbered list and does not claim that the list is clickable. Fork, clone, install, execution, and persistent state remain separate confirmations.
 
+OpenCode’s built-in `question` tool supports multiple questions before submission. Upstack uses that capability only for a short safe chain of answer-independent questions, such as focus followed by time budget. It does not chain intent into source selection, dependent outcome questions, focus into skill calibration, discovery actions into candidate selection, or any external-action approval. After answers are submitted, Upstack recomputes the next dependent question set. If chaining is unavailable or uncertain, it falls back to one question per call.
+
 ## The ingredients and recipe
 
 A local initialization creates a learner-owned `.upstack/` directory:
@@ -179,6 +181,7 @@ Neither skill silently overwrites the other’s `.upstack/` or `.learning/` stat
 python3 scripts/check_capabilities.py --json
 python3 scripts/inventory_repo.py /path/to/repository --output /tmp/inventory.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output /tmp/candidates.json
+python3 scripts/onboarding.py . --host opencode --chain --json
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 

@@ -4,7 +4,7 @@ Upstack is a portable Agent Skills project-apprenticeship suite. It helps learne
 
 ## Route-first behavior
 
-For `/upstack`, begin with the learner’s intended outcome before inspecting the current folder, repository, files, stack, or home-directory contents. If the request does not state a clear outcome, ask one intent question through the host’s native question UI when available. Do not print a prose version of the question and then invoke the native question UI. After the intent is known, inspect only the context relevant to that route, distinguish a selected project from a broad workspace, preserve the original request, show the draft inventory and first direction, and ask before writing `.upstack/`. Stateless previews or explanations may continue without writing `.upstack/`.
+For `/upstack`, begin with the learner’s intended outcome before inspecting the current folder, repository, files, stack, or home-directory contents. If the request does not state a clear outcome, ask one intent question through the host’s native question UI when available. Do not print a prose version of the question and then invoke the native question UI. After the intent is known, inspect only the context relevant to that route, distinguish a selected project from a broad workspace, preserve the original request, show the draft inventory and first direction, and ask before writing `.upstack/`. Stateless previews or explanations may continue without writing `.upstack/`. OpenCode may receive a short precomputed chain through its native `question` tool, but only when the questions are answer-independent; recompute after dependent answers and use one question call otherwise.
 
 ## Inventory and provenance
 
@@ -16,7 +16,7 @@ Use `scripts/discover_github.py` for metadata-first public repository discovery.
 
 ## Learner ownership
 
-Use `scripts/onboarding.py` and `references/onboarding.md` to ask one relevant question per turn in this order: intent, outcome detail, source or project type, focus, time budget, relevant skill confidence, then guidance mode. The first intent question is context-independent. Skip questions already answered or irrelevant to the selected route, and keep controller metadata such as `why_this_now` out of the user-facing message. Generate one stage at a time. Do not provide a complete implementation or every future lesson by default. Use `/overflow` for source-cited lessons, quizzes, exercises, hints, assessments, review, and durable learning memory; keep `.learning/` and `.upstack/` separate.
+Use `scripts/onboarding.py` and `references/onboarding.md` to plan the question flow in this order: intent, outcome detail, source or project type, focus, time budget, relevant skill confidence, then guidance mode. The first intent question is context-independent. For OpenCode, `scripts/onboarding.py --host opencode --chain` may submit a short independent prefix such as focus followed by time budget; it must not chain intent, dependent outcome/source questions, discovery actions with candidate selection, or external approvals. Skip questions already answered or irrelevant to the selected route, and keep controller metadata such as `why_this_now` out of the user-facing message. Generate one stage at a time. Do not provide a complete implementation or every future lesson by default. Use `/overflow` for source-cited lessons, quizzes, exercises, hints, assessments, review, and durable learning memory; keep `.learning/` and `.upstack/` separate.
 
 ## External actions
 

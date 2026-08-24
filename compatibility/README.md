@@ -53,7 +53,8 @@ Hosts must preserve the following boundaries:
 - `.upstack/` remains repository-local and is not mixed with host configuration.
 - Learner choices use the host’s native question tool or selectable UI where supported; text-only hosts use short numbered or lettered lists without claiming they are clickable.
 - Onboarding asks the learner’s intent before source or folder questions, then asks only questions that change goal, source, focus, stage size, guidance depth, or an external-action decision, and skips questions already answered.
-- A native question tool is the only user-facing prompt for that turn; the agent must not print a duplicate prose list or expose controller metadata such as route reasons.
+- OpenCode may receive a short chained native-question plan because its built-in `question` tool supports multiple questions before submission. Upstack chains only answer-independent questions, such as focus followed by time budget; it recomputes after dependent answers. Other hosts use one question per call unless their native capability is verified.
+- A native question tool is the only user-facing prompt for that turn; the agent must not print a duplicate prose list or expose controller metadata such as route reasons. For a chained native call, the returned question set is the only prompt; do not add prose questions before or after it.
 - Source provenance distinguishes `observed`, `inferred`, and `unknown`.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.
 - Upstack and Overflow keep separate state directories and exchange only compact context payloads.

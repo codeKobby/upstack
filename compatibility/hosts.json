@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "hosts": [
     {
@@ -39,6 +39,13 @@
       "project_paths": [".opencode/skills/<skill>/SKILL.md", ".agents/skills/<skill>/SKILL.md"],
       "global_paths": ["~/.config/opencode/skills/<skill>/SKILL.md"],
       "invocation": ["native skill tool", "slash UI"],
+      "question_ui": {
+        "tool": "question",
+        "supports_multiple_questions": true,
+        "supports_custom_answers": true,
+        "conditional_chaining": "recompute-between-submissions",
+        "upstack_planner": "scripts/onboarding.py --host opencode --chain"
+      },
       "install": ["npx skills add codeKobby/upstack --all -a opencode"]
     },
     {
