@@ -1,6 +1,6 @@
 {
   "name": "upstack",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, public GitHub discovery, and honest portfolio evidence.",
   "skills": ["upstack"],
   "agents": [
@@ -37,6 +37,7 @@
     "x_api": "optional-recent-search; requires-user-provided-bearer-token",
     "video_evidence": "optional-metadata-and-reviewed-timestamp-map",
     "vscode_video_companion": "optional-vsix-adapter-for-synchronized-video-and-code",
+    "video_companion_installer": "confirmation-gated-vscode-cli-or-vsix-install",
     "mcp": "optional-provider-accelerator"
   },
   "license": "MIT"

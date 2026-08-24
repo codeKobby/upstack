@@ -20,6 +20,7 @@ DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
 DISCOVERY_PROJECTS = ROOT / "scripts" / "discover_projects.py"
 HOST_MATRIX = ROOT / "compatibility" / "hosts.json"
 VIDEO_EVIDENCE = ROOT / "scripts" / "video_evidence.py"
+INSTALL_COMPANION = ROOT / "scripts" / "install_video_companion.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -184,6 +185,21 @@ class UpstackTests(unittest.TestCase):
         module = load_module("upstack_discover_projects_extract", DISCOVERY_PROJECTS)
         links = module.extract_repository_links("See https://github.com/owner/demo/blob/main/src/app.tsx and https://gitlab.com/team/tool.git")
         self.assertEqual(links, ["https://github.com/owner/demo", "https://gitlab.com/team/tool"])
+
+    def test_companion_installer_requires_confirmation_and_has_fallback(self):
+        module = load_module("upstack_install_video_companion", INSTALL_COMPANION)
+        unsupported = module.build_plan(host="unknown-agent")
+        self.assertEqual(unsupported["status"], "unsupported_host")
+        self.assertFalse(unsupported["requires_confirmation"])
+        self.assertIn("video-map.md", unsupported["portable_fallback"])
+        with tempfile.NamedTemporaryFile(suffix=".vsix") as handle:
+            with patch.object(module.shutil, "which", return_value="/usr/bin/code"):
+                plan = module.build_plan(host="vscode", vsix=handle.name)
+            self.assertEqual(plan["status"], "ready_for_confirmation")
+            self.assertTrue(plan["requires_confirmation"])
+            declined = module.install(plan, confirmed=False)
+            self.assertEqual(declined["install_result"], "confirmation_required")
+            self.assertFalse(declined["install_attempted"])
 
     def test_vscode_companion_manifest_and_security_contract(self):
         manifest = json.loads((VSCODE_EXTENSION / "package.json").read_text(encoding="utf-8"))

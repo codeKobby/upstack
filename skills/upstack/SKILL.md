@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "0.9.0"
+  version: "1.0.0"
   package: upstack
 ---
 
@@ -206,6 +206,8 @@ The generated Markdown is portable across coding agents. VS Code can open relati
 
 When the optional `vscode-extension/` companion is installed, also write the structured evidence file with `--json-output .upstack/sources/video-map.json`. The learner can then run **Upstack: Open Video Companion** from VS Code’s Command Palette to follow the video beside the repository, jump to segments, open code or lesson anchors, and save local progress. The extension is an adapter only; never require it for another host and never claim it is installed without host evidence.
 
+If the active host is VS Code or VS Code Insiders, use `scripts/install_video_companion.py --host HOST_ID --json` to check whether the companion is installed. If the result is `ready_for_confirmation`, ask one native confirmation question that states the exact source and install command. Run the helper again with `--confirm` only after the learner explicitly approves. If the learner declines, the CLI is unavailable, the VSIX is missing, or the host is not VS Code, continue with the portable Markdown/JSON map. Never silently install, overwrite an existing extension, request credentials, or claim successful installation without command output.
+
 The helpers prefer GitHub CLI when available. `discover_projects.py` can use `gh search repos`, `gh repo read-file`, and `gh repo read-dir` without cloning, and falls back to the public GitHub REST API. YouTube and X are optional: use `YOUTUBE_API_KEY` and `X_BEARER_TOKEN` only when configured, never print them, and report `not_configured` with a host web-search fallback when absent. Do not require GitHub CLI, YouTube credentials, X credentials, or an MCP for local Upstack workflows.
 
 ## Prepare a selected source safely
@@ -268,6 +270,7 @@ python3 scripts/inventory_repo.py . --output .upstack/PROJECT_INVENTORY.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output .upstack/candidates/search.json
 python3 scripts/discover_projects.py "serious TypeScript project for backend interview practice" --stack TypeScript --focus "backend APIs" --signal "backend depth" --output .upstack/candidates/cross-source.json
 python3 scripts/video_evidence.py "https://www.youtube.com/watch?v=VIDEO_ID" --segments-file /tmp/video-segments.json --repository-file /tmp/repository-anchors.json --output .upstack/sources/video-map.md --json-output .upstack/sources/video-map.json
+python3 scripts/install_video_companion.py --host <host-id> --json
 ```
 
 Helpers are read-only unless a command explicitly writes a requested report. They are not substitutes for judgment. Never claim a repository was indexed, a README was read, a command ran, or a candidate was ranked unless the host produced evidence.
