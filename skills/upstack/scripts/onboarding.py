@@ -338,11 +338,67 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
     return None
 
 
+CHAINABLE_QUESTION_IDS = {"focus", "time_budget"}
+
+
+def question_chain(ctx: dict[str, Any] | None, answers: dict[str, Any], *, max_questions: int = 3) -> list[dict[str, Any]]:
+    """Return a short chain only for questions whose later wording is answer-independent.
+
+    Intent, outcome detail, source, source path, and discovery candidate decisions are
+    intentionally never chained because their answers change the next question or
+    the safe action boundary.
+    """
+    if max_questions < 1:
+        return []
+    chain: list[dict[str, Any]] = []
+    projected = dict(answers)
+    while len(chain) < max_questions:
+        current = next_question(ctx, projected)
+        if current is None:
+            break
+        question_id = current.get("id")
+        if question_id not in CHAINABLE_QUESTION_IDS and chain:
+            break
+        chain.append(current)
+        if question_id not in CHAINABLE_QUESTION_IDS:
+            break
+        # Project a completed answer only to discover the next independent question.
+        # The host still collects the real answer for the displayed question.
+        if question_id == "focus":
+            # Time budget is independent of the selected focus, so it is safe to
+            # include as the second question. Stop before skill calibration because
+            # its wording and answer choices depend on the actual focus answer.
+            projected["focus"] = "__focus_selected__"
+        elif question_id == "time_budget":
+            projected["time_budget"] = "__time_selected__"
+    return chain
+
+
+def question_plan(ctx: dict[str, Any] | None, answers: dict[str, Any], *, host: str = "generic") -> dict[str, Any]:
+    """Build the host delivery plan without exposing controller metadata to learners."""
+    if host == "opencode":
+        return {
+            "host": "opencode",
+            "mode": "native-multi-question-when-safe",
+            "questions": question_chain(ctx, answers),
+            "safety": "Only the returned questions may be sent to the native question tool; recompute after dependent answers.",
+        }
+    current = next_question(ctx, answers)
+    return {
+        "host": host,
+        "mode": "native-single-question-or-text-fallback",
+        "questions": [current] if current else [],
+        "safety": "Only the returned question may be shown for this turn.",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", nargs="?", type=Path, default=Path.cwd())
     parser.add_argument("--answers", type=Path, help="JSON file containing normalized answers")
     parser.add_argument("--json", action="store_true", help="emit JSON")
+    parser.add_argument("--host", choices=("generic", "opencode"), default="generic", help="host interaction capabilities")
+    parser.add_argument("--chain", action="store_true", help="emit a short host-aware question plan instead of one question")
     args = parser.parse_args()
     answers: dict[str, Any] = {}
     if args.answers:
@@ -351,7 +407,11 @@ def main() -> int:
         ctx = context(args.path)
     else:
         ctx = intent_context()
-    print(json.dumps({"context": ctx, "next_question": next_question(ctx, answers)}, indent=2))
+    if args.chain:
+        payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host)}
+    else:
+        payload = {"context": ctx, "next_question": next_question(ctx, answers)}
+    print(json.dumps(payload, indent=2))
     return 0
 
 
