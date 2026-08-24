@@ -123,14 +123,23 @@ orient → inventory → trace → runnable foundation → first vertical slice
 
 The assistant uses modeling, coaching, targeted scaffolding, reflection, and gradual fading. It should not generate the full implementation or every future lesson at once.
 
-## Public repository discovery
+## Public project discovery
 
-Upstack searches in two levels:
+Upstack does not search from a single generic technology phrase. It first turns the learner’s request into criteria such as intended outcome, target role or portfolio signal, stack, project shape, focus, concepts, skill level, time budget, and exclusions such as tutorial-only or boilerplate projects. It then creates multiple search lanes for project identity, README evidence, real-world/portfolio fit, and the specific implementation focus.
 
-1. **Repository metadata first:** description, primary language, language breakdown, topics, stars, forks, license, default branch, archive/fork status, size, open issues, updated and pushed dates, URL, and owner.
-2. **Targeted enrichment second:** README headings and signals, then root manifests and configuration such as `package.json`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `Dockerfile`, `tsconfig.json`, framework config, and CI files.
+GitHub remains the verification authority, searched through repository name/description/topics, README terms, language/topic filters, activity, license, issue, and scope signals. The default shortlist contains three repositories; use five for a broad search. Candidates are deduplicated, enriched, and ranked against the learner’s criteria rather than by stars alone.
 
-The default shortlist contains three repositories; use five for a broad search. Each candidate includes an explainable score for stack fit, documentation, testability, license clarity, maintenance, and popularity signal, with risks and uncertainty. Stars and forks are popularity signals, not proof of quality.
+Optional context search can use YouTube walkthroughs and descriptions, X launch threads and author posts, web/blog/forum results, package registries, and demo pages. These sources can reveal projects that GitHub search misses and often contain repository links. Upstack extracts and canonicalizes those links, verifies them through repository metadata and README evidence, and keeps the original source URL, author/channel, date, query, and extraction basis. An unverified link remains a lead, not a ranked candidate.
+
+The default helper is:
+
+```bash
+python3 scripts/discover_projects.py "serious TypeScript project for backend interview practice" \
+  --stack TypeScript --focus "backend APIs" --signal "backend depth" \
+  --output .upstack/candidates/cross-source.json
+```
+
+YouTube and X are optional. They return a clear not-configured status unless `YOUTUBE_API_KEY` or `X_BEARER_TOKEN` is deliberately provided, and the host may instead supply web-search results through a JSON file. External mentions are bounded context signals, not proof of code quality, licensing, maintainability, or educational value.
 
 ```text
 /upstack discover serious TypeScript projects for an emerging full-stack developer
@@ -181,6 +190,7 @@ Neither skill silently overwrites the other’s `.upstack/` or `.learning/` stat
 python3 scripts/check_capabilities.py --json
 python3 scripts/inventory_repo.py /path/to/repository --output /tmp/inventory.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output /tmp/candidates.json
+python3 scripts/discover_projects.py "serious TypeScript project for backend interview practice" --stack TypeScript --focus "backend APIs" --signal "backend depth" --output /tmp/cross-source.json
 python3 scripts/onboarding.py . --host opencode --chain --json
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```

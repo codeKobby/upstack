@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "0.4.0"
+  version: "0.5.0"
   package: upstack
 ---
 
@@ -168,23 +168,26 @@ Use modeling, coaching, scaffolding, reflection, and gradual fading. Start with 
 
 ## Discover public repositories
 
-Use `scripts/discover_github.py "<query>" --count 3` for a read-only shortlist. Allow `--count 5` for broad searches. The discovery sequence is:
+Use `scripts/discover_projects.py "<request>" --count 5` for a read-only, intent-driven shortlist. It creates several GitHub recall lanes, optionally searches YouTube and X when credentials are configured, accepts host-collected web/blog/forum results, extracts repository links from external context, verifies links against repository metadata, deduplicates, and ranks with explainable evidence. Use `scripts/discover_github.py` directly only as the GitHub-only fallback.
 
-1. Clarify stack, project type, focus, learner skill vector, time budget, and desired portfolio signal.
-2. Search **repository metadata first**: description, primary language, language fit, topics, stars, forks, license, default branch, archive/fork status, size, open issues, updated and pushed dates, URL, and owner.
-3. For the top candidates, retrieve the README and inspect headings and signals for installation, usage, architecture, testing, contributing, deployment, environment, and license.
-4. Read only targeted root files such as `package.json`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `Dockerfile`, `docker-compose.yml`, `tsconfig.json`, and framework configuration when present.
-5. Rank candidates with an explainable score for stack fit, documentation, testability, license clarity, maintenance, and popularity signal. Show the breakdown and uncertainty.
-6. Present a shortlist with repository URL, license, stack, difficulty, learning value, evidence quality, maintenance signal, portfolio signal, and risks.
-7. Present the shortlist, then stop and ask exactly one shortlist-action question. Do not put candidate numbers and action choices in the same question or prose menu.
-8. If the learner chooses **choose a repository**, ask a new, candidate-only question whose option values are stable repository identifiers such as `candidate:OWNER/REPO`. Resolve the answer against that candidate question only. A reply such as `2` to the action question means the second action, never candidate number 2.
-9. Wait for candidate selection before any fork, clone, install, or execution.
+The discovery sequence is:
 
-Use `scripts/discovery_interaction.py` to build and resolve these two questions when deterministic support is useful. With a native question tool, send only the returned question for the current turn; do not print an equivalent prose menu. In a text-only host, render only that one question as a short numbered or lettered list. After **broaden search** or **stop here**, do not infer a candidate selection.
+1. Clarify the learner’s intended outcome, role or portfolio signal, stack, project shape, focus, concepts, skill level, time budget, and exclusions such as tutorial-only or boilerplate projects.
+2. Build multiple recall lanes: repository name/description/topics, README evidence, real-world or portfolio terms, and focus-specific implementation terms. Do not rely on one generic technology query.
+3. Search **repository metadata first**: description, primary language, language fit, topics, stars, forks, license, default branch, archive/fork status, size, open issues, updated and pushed dates, URL, and owner.
+4. Optionally search YouTube, X, and host-provided web/blog/forum sources for walkthroughs, launch posts, project descriptions, demos, and repository links. Use separate query lanes rather than one generic web search: exact project/domain plus `GitHub`, project type plus stack plus `walkthrough`, author/channel plus `repository`, and distinctive project phrases plus `source code`. Record source URL, author/channel, publication time, query, and extraction basis.
+5. Canonicalize every extracted repository link and verify it through repository metadata and README before treating it as a candidate. Keep unresolved links visible as unverified leads. When the host provides web/blog/forum results, save their title, URL, snippet or description, source type, and retrieval time as JSON and pass them to `discover_projects.py --external-file`; do not treat search snippets as verified repository evidence.
+6. For the strongest candidates, retrieve the README and inspect headings and signals for installation, usage, architecture, testing, contributing, deployment, environment, and license. Read only targeted root configuration files.
+7. Rank candidates with an explainable score for intent fit, stack fit, scope, documentation, testability, license clarity, maintenance, and bounded cross-source context. Popularity and external mentions are signals, not quality proof.
+8. Present a shortlist with repository URL, source provenance, license, stack, difficulty, learning value, evidence quality, maintenance signal, portfolio signal, and risks.
+9. Present the shortlist, then stop and ask exactly one shortlist-action question. Do not put candidate numbers and action choices in the same question or prose menu.
+10. If the learner chooses **choose a repository**, ask a new, candidate-only question whose option values are stable repository identifiers such as `candidate:OWNER/REPO`. Resolve the answer against that candidate question only. Wait for candidate selection before any fork, clone, install, or execution.
+
+Use `scripts/discovery_interaction.py` to build and resolve the shortlist-action and candidate questions. With a native question tool, send only the returned question for the current turn; do not print an equivalent prose menu. In a text-only host, render only that one question as a short numbered or lettered list. After **broaden search** or **stop here**, do not infer a candidate selection.
 
 Repository metadata is the first stage, not the entire analysis. README and targeted content enrich and verify the shortlist. Stars and forks are popularity signals, not proof of educational quality or maintainability. An absent or unclear license must remain visible as a risk.
 
-The helper prefers GitHub CLI when available. It may use `gh search repos`, `gh repo read-file`, and `gh repo read-dir` without cloning. It falls back to the public GitHub REST API for read-only metadata and content, then to web retrieval when the host provides it. Do not require GitHub CLI or an MCP for local Upstack workflows.
+The helpers prefer GitHub CLI when available. `discover_projects.py` can use `gh search repos`, `gh repo read-file`, and `gh repo read-dir` without cloning, and falls back to the public GitHub REST API. YouTube and X are optional: use `YOUTUBE_API_KEY` and `X_BEARER_TOKEN` only when configured, never print them, and report `not_configured` with a host web-search fallback when absent. Do not require GitHub CLI, YouTube credentials, X credentials, or an MCP for local Upstack workflows.
 
 ## Prepare a selected source safely
 
@@ -242,6 +245,7 @@ python3 scripts/check_capabilities.py --json
 python3 scripts/onboarding.py . --json
 python3 scripts/inventory_repo.py . --output .upstack/PROJECT_INVENTORY.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output .upstack/candidates/search.json
+python3 scripts/discover_projects.py "serious TypeScript project for backend interview practice" --stack TypeScript --focus "backend APIs" --signal "backend depth" --output .upstack/candidates/cross-source.json
 ```
 
 Helpers are read-only unless a command explicitly writes a requested report. They are not substitutes for judgment. Never claim a repository was indexed, a README was read, a command ran, or a candidate was ranked unless the host produced evidence.

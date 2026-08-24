@@ -1,6 +1,6 @@
 {
   "name": "upstack",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, public GitHub discovery, and honest portfolio evidence.",
   "skills": ["upstack"],
   "agents": [
@@ -33,6 +33,8 @@
     "github_cli": "optional-preferred-for-authenticated-actions",
     "github_rest": "optional-public-read-only-fallback",
     "web_search": "optional-public-discovery-fallback",
+    "youtube_data_api": "optional-context-search; requires-user-provided-api-key",
+    "x_api": "optional-recent-search; requires-user-provided-bearer-token",
     "mcp": "optional-provider-accelerator"
   },
   "license": "MIT"

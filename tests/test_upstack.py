@@ -17,6 +17,7 @@ if not (ROOT / "scripts" / "inventory_repo.py").exists():
 INVENTORY = ROOT / "scripts" / "inventory_repo.py"
 DISCOVERY = ROOT / "scripts" / "discover_github.py"
 DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
+DISCOVERY_PROJECTS = ROOT / "scripts" / "discover_projects.py"
 
 
 def load_module(name: str, path: Path):
@@ -105,6 +106,81 @@ class UpstackTests(unittest.TestCase):
         self.assertIn("package.json", candidate["targeted_files"])
         self.assertGreater(candidate["score"]["overall"], 0)
         self.assertEqual(report["side_effects"], [])
+
+    def test_cross_source_query_lanes_are_diverse_and_qualified(self):
+        module = load_module("upstack_discover_projects_lanes", DISCOVERY_PROJECTS)
+        lanes = module.build_query_lanes(
+            "build a serious Instagram-style app for interview practice",
+            stack=["TypeScript", "Next.js"],
+            project_type="web application",
+            focus="backend APIs",
+            concepts=["authentication", "testing"],
+            level="guided",
+            signal="backend depth",
+        )
+        self.assertGreaterEqual(len(lanes), 3)
+        self.assertEqual(len(lanes), len(set(lanes)))
+        self.assertTrue(any("in:name,description,topics" in lane for lane in lanes))
+        self.assertTrue(any("in:readme" in lane for lane in lanes))
+        self.assertTrue(any("-tutorial" in lane for lane in lanes))
+
+    def test_cross_source_links_match_verified_github_candidates(self):
+        module = load_module("upstack_discover_projects_links", DISCOVERY_PROJECTS)
+        candidate = {
+            "metadata": {"fullName": "owner/demo", "description": "A serious TypeScript API project", "topics": ["typescript", "api"]},
+            "readme": {"headings": ["Architecture", "Testing"]},
+            "score": {"overall": 70},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            external_file = Path(directory) / "external.json"
+            external_file.write_text(json.dumps({"results": [
+                {"source": "youtube", "url": "https://youtube.com/watch?v=demo", "title": "Build owner/demo", "description": "Walkthrough https://github.com/owner/demo/blob/main/README.md"},
+                {"source": "x", "url": "https://x.com/dev/status/1", "text": "Launch thread for https://github.com/owner/demo"},
+            ]}), encoding="utf-8")
+            with patch.object(module, "github_discover", return_value={"candidates": [candidate], "errors": []}):
+                report = module.discover_projects("TypeScript API project", sources=["github"], external_file=external_file, count=3)
+        self.assertEqual(len(report["candidates"]), 1)
+        matched = report["candidates"][0]
+        self.assertEqual(matched["metadata"]["fullName"], "owner/demo")
+        self.assertEqual(len(matched["external_evidence"]), 2)
+        self.assertGreaterEqual(matched["score"]["cross_source_evidence"], 2)
+        self.assertEqual(report["side_effects"], [])
+        self.assertEqual(report["unverified_repository_links"], [])
+
+    def test_youtube_and_x_results_normalize_links_and_metadata(self):
+        module = load_module("upstack_discover_projects_social", DISCOVERY_PROJECTS)
+
+        def fake_request(url, headers=None):
+            if "googleapis.com/youtube" in url:
+                return {"items": [{"id": {"videoId": "abc"}, "snippet": {"title": "Build demo", "description": "Code: https://github.com/owner/demo", "publishedAt": "2026-08-20T00:00:00Z", "channelTitle": "Builder"}}]}, None
+            if "api.x.com" in url:
+                return {"data": [{"id": "123", "text": "Launch https://github.com/owner/demo", "created_at": "2026-08-21T00:00:00Z", "author_id": "7"}], "includes": {"users": [{"id": "7", "username": "builder"}]}}, None
+            raise AssertionError(url)
+
+        with patch.object(module, "_request_url", side_effect=fake_request):
+            youtube, youtube_status = module.search_youtube("demo", api_key="youtube-secret", limit=1)
+            posts, x_status = module.search_x("demo", bearer_token="x-secret", limit=10)
+        self.assertEqual(youtube_status["status"], "ok")
+        self.assertEqual(x_status["status"], "ok")
+        self.assertEqual(youtube[0]["repository_links"], ["https://github.com/owner/demo"])
+        self.assertEqual(posts[0]["repository_links"], ["https://github.com/owner/demo"])
+        self.assertNotIn("youtube-secret", json.dumps(youtube))
+        self.assertNotIn("x-secret", json.dumps(posts))
+
+    def test_optional_sources_report_clear_not_configured_status(self):
+        module = load_module("upstack_discover_projects_optional", DISCOVERY_PROJECTS)
+        with patch.dict(module.os.environ, {}, clear=True):
+            report = module.discover_projects("React project", sources=["youtube", "x"], count=3)
+        statuses = {item["source"]: item for item in report["sources"]}
+        self.assertEqual(statuses["youtube"]["status"], "not_configured")
+        self.assertEqual(statuses["x"]["status"], "not_configured")
+        self.assertEqual(report["candidates"], [])
+        self.assertEqual(report["side_effects"], [])
+
+    def test_repository_link_extraction_canonicalizes_paths_and_git_suffix(self):
+        module = load_module("upstack_discover_projects_extract", DISCOVERY_PROJECTS)
+        links = module.extract_repository_links("See https://github.com/owner/demo/blob/main/src/app.tsx and https://gitlab.com/team/tool.git")
+        self.assertEqual(links, ["https://github.com/owner/demo", "https://gitlab.com/team/tool"])
 
     def test_discovery_interaction_separates_actions_from_candidate_selection(self):
         module = load_module("upstack_discovery_interaction", DISCOVERY_INTERACTION)

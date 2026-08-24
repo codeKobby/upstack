@@ -20,8 +20,12 @@ Use the following preference order:
 1. local filesystem and Git for local projects;
 2. `gh search repos`, `gh repo read-file`, and `gh repo read-dir` for structured GitHub discovery when available;
 3. GitHub REST GET endpoints for public metadata, README, and contents;
-4. web retrieval for public documentation or candidates not available through the API;
-5. optional user-enabled MCP connectors for provider-specific repository, documentation, issue, diagram, or job-search operations.
+4. optional YouTube Data API search for walkthroughs and descriptions when `YOUTUBE_API_KEY` is explicitly configured;
+5. optional X Recent Search for launch threads, author posts, and repository links when `X_BEARER_TOKEN` is explicitly configured;
+6. web retrieval or host web search for public documentation, videos, posts, project pages, and candidates not available through the APIs;
+7. optional user-enabled MCP connectors for provider-specific repository, documentation, issue, diagram, or job-search operations.
+
+Use `scripts/discover_projects.py` to coordinate these sources. External sources are context leads: extract repository URLs, canonicalize them, verify them through repository metadata and README, and retain the source URL, author/channel, timestamp, query, and extraction basis. If an API is unavailable or credentials are absent, report `not_configured` and use host web search or a user-provided JSON result file; do not scrape around access limits.
 
 MCPs are optional. Never ask the learner to configure an MCP merely to use local Upstack. When an MCP is relevant, state the capability it provides, what data it can access, whether it can write externally, and what the fallback is. Inspect current connector availability before recommending configuration; do not enable or create connectors automatically.
 
@@ -31,6 +35,12 @@ Always announce the next action before executing it:
 
 ```text
 I’ll search GitHub repository metadata first. Then I’ll read the README and a few root configuration files for the top three candidates. I will not clone, fork, install, or run anything unless you choose a candidate and confirm each step.
+```
+
+For cross-source discovery:
+
+```text
+I’ll search several read-only sources using your stated project goal, stack, focus, and portfolio or interview signal. I’ll verify repository links against repository metadata and README evidence, show source provenance and uncertainty, and will not clone, fork, install, or run anything unless you choose and confirm each step.
 ```
 
 For local initialization:

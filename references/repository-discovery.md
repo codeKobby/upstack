@@ -15,6 +15,30 @@ Prefer the strongest available path without making it a hard dependency:
 
 Detect capabilities before announcing a route. Use `gh --version`, `gh auth status`, and the host’s configured integration list without displaying tokens. A missing CLI or connector should produce a clear fallback, not a failure of the local workflow.
 
+## Intent-driven cross-source sequence
+
+Do not search from a vague technology keyword alone. First normalize the learner’s request into explicit criteria: intended outcome, role or portfolio signal, stack, project shape, focus, concepts, skill level, time budget, and exclusions such as tutorial-only or boilerplate projects. Preserve the original request and show the criteria used for search.
+
+Generate multiple recall lanes rather than one generic query. At minimum use:
+
+1. name, description, and topic matching for project identity;
+2. README matching for architecture, testing, documentation, and setup evidence;
+3. real-world or portfolio matching with tutorial, boilerplate, and todo exclusions when appropriate; and
+4. a focus-specific implementation lane for the chosen feature, domain, or engineering signal.
+
+Search GitHub through these lanes, collect a larger recall pool, deduplicate by canonical owner/repository, enrich only the strongest candidates, and rank them against the learner’s criteria. A high star count or a familiar project name must not outrank a smaller project with stronger scope, evidence, and learning fit.
+
+Use optional context sources to discover projects that GitHub search misses:
+
+| Source | Use | Access boundary |
+| --- | --- | --- |
+| YouTube | Find walkthroughs, build logs, launch demos, channel expertise, and repository links in descriptions. | Use the YouTube Data API when configured or a host-provided web search result. API results require an API key and quota; do not scrape around limits. |
+| X | Find launch threads, author posts, project links, implementation notes, and recent discussions. | Use X Recent Search when configured; it covers recent posts, not the complete archive. Full-archive access has higher access requirements. |
+| Web/blog/forum search | Find project pages, articles, demos, talks, and links from sources not indexed well by repository search. | Use the host’s web-search or web-retrieval capability, or accept a user/host-provided JSON result file. Search snippets are leads, not verification. |
+| Package registries and demo pages | Confirm package identity, ecosystem usage, live demos, and related projects. | Treat registry and demo metadata as context; verify the actual source repository and license before selection. |
+
+Extract repository URLs from external titles, descriptions, transcripts, posts, and articles, canonicalize them to repository roots, and then verify each link through GitHub or another repository host’s metadata and README. Keep every external item attached to its source URL, author/channel, publication time, query, retrieved time, and extraction basis. Unverified links remain visible as leads and must not be ranked as verified candidates.
+
 ## Metadata-first sequence
 
 First query repository metadata. At minimum retain:
@@ -56,6 +80,8 @@ Read source files only after the learner chooses a candidate or focus. A discove
 
 If remote-content CLI commands are unavailable, use the GitHub README and contents endpoints. If a README cannot be fetched, mark the candidate as documentation-unknown instead of silently using search snippets. If the repository is private or access fails, report the failure and offer a user-provided URL or local clone.
 
+When combining cross-source evidence, do not treat mentions as quality proof. Use external evidence as a bounded context signal: a relevant walkthrough or author thread can improve discoverability and explainability, but it cannot replace repository metadata, README evidence, license clarity, testability, or scope fit.
+
 ## Explainable scoring
 
 Score each candidate on a 0–100 scale, retaining every component and its reason. Suggested components:
@@ -69,6 +95,7 @@ Score each candidate on a 0–100 scale, retaining every component and its reaso
 | Maintenance signal | 10 | Recent push/update activity, archived state, open risk |
 | Popularity signal | 10 | Stars and forks, shown as popularity only |
 | Scope fit | 5 | Size and integration count relative to learner time budget |
+| Cross-source context | bounded modifier | Relevant verified external references, never a quality substitute |
 
 Do not present the score without its breakdown. Include uncertainty such as missing license, unclear setup, no visible tests, oversized scope, external-service dependence, or weak source provenance. Difficulty is not identical to popularity and must be recalibrated against the learner’s skill vector.
 
