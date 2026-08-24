@@ -256,6 +256,37 @@ def _outcome_question(goal: str) -> dict[str, Any]:
     )
 
 
+def _job_requirements_question() -> dict[str, Any]:
+    return question(
+        "job_requirements",
+        "What job requirements should we prepare against?",
+        [
+            option("Paste the job description or requirements", "Use the exact responsibilities, qualifications, stack, and level supplied by the employer.", "paste"),
+            option("Provide an official job-posting URL", "Read the public posting and preserve its URL as the requirement source.", "url"),
+            option("Provide a local requirements file", "Use a recruiter packet, saved job description, or interview instructions on this machine.", "file"),
+            option("Give me a role summary first", "Start with your own summary while we identify what evidence is still missing.", "summary"),
+        ],
+        why="Interview practice should be tied to the actual role requirements before Upstack searches for question patterns or chooses a study plan.",
+        allow_freeform=True,
+    )
+
+
+def _self_assessment_question() -> dict[str, Any]:
+    return question(
+        "self_assessment",
+        "How would you describe your current knowledge for this role?",
+        [
+            option("New to most of it", "I need fundamentals, vocabulary, examples, and tightly bounded diagnostics.", "new"),
+            option("Working knowledge", "I can follow and modify examples but need support with unfamiliar problems or trade-offs.", "working"),
+            option("Comfortable in the core areas", "I can build and explain common solutions but want role-specific depth and speed.", "comfortable"),
+            option("Strong but uneven", "I can handle much of the role, but I want to find specific gaps and interview weaknesses.", "strong-uneven"),
+            option("I will describe my experience", "Give technologies, projects, responsibilities, and areas where you feel uncertain.", "freeform"),
+        ],
+        why="Self-report sets an initial hypothesis; Upstack will test selected dimensions with small explanations, traces, implementation tasks, debugging, or design defenses.",
+        allow_freeform=True,
+    )
+
+
 def _project_mode_question(goal: str) -> dict[str, Any]:
     return question(
         "project_mode",
@@ -445,6 +476,12 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
 
     if goal in {"understand", "interview", "portfolio", "skill-upgrade", "rebuild"} and not answers.get("outcome_detail"):
         return _outcome_question(goal)
+
+    if goal == "interview" and not answers.get("job_requirements"):
+        return _job_requirements_question()
+
+    if goal == "interview" and not answers.get("self_assessment"):
+        return _self_assessment_question()
 
     if goal in SOURCE_GOALS and not answers.get("project_mode"):
         return _project_mode_question(goal)

@@ -22,6 +22,7 @@ HOST_MATRIX = ROOT / "compatibility" / "hosts.json"
 VIDEO_EVIDENCE = ROOT / "scripts" / "video_evidence.py"
 INSTALL_COMPANION = ROOT / "scripts" / "install_video_companion.py"
 UI_DESIGN = ROOT / "scripts" / "ui_design.py"
+INTERVIEW_PREP = ROOT / "scripts" / "interview_prep.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -381,10 +382,13 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.3.0")
+        self.assertEqual(matrix["version"], "1.4.0")
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
         self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
+        self.assertTrue(matrix["interview_policy"]["requirements_first"])
+        self.assertIn("self-report-plus-small-diagnostics", matrix["interview_policy"]["skill_profile"])
+        self.assertIn("markdown", matrix["interview_policy"]["output_modes"])
 
     def test_verified_native_multi_capability_is_host_neutral(self):
         module = load_module("upstack_onboarding_host_neutral", ROOT / "scripts" / "onboarding.py")
@@ -496,6 +500,59 @@ class OnboardingTests(unittest.TestCase):
         self.assertNotIn("stitch-mcp", [item["value"] for item in without["options"]])
         with_stitch = module.next_question({"design_tools": ["stitch-mcp"]}, answers)
         self.assertIn("stitch-mcp", [item["value"] for item in with_stitch["options"]])
+
+    def test_interview_route_collects_requirements_and_skill_profile_before_source(self):
+        module = load_module("upstack_onboarding_interview", ROOT / "scripts" / "onboarding.py")
+        answers = {"goal": "interview", "outcome_detail": "backend"}
+        self.assertEqual(module.next_question(None, answers)["id"], "job_requirements")
+        answers["job_requirements"] = "paste"
+        self.assertEqual(module.next_question(None, answers)["id"], "self_assessment")
+        answers["self_assessment"] = "working"
+        self.assertEqual(module.next_question(None, answers)["id"], "project_mode")
+
+    def test_interview_planner_separates_self_report_and_demonstrated_skill(self):
+        module = load_module("upstack_interview_profile", INTERVIEW_PREP)
+        profile = module.build_skill_profile(
+            {"level": "working", "dimensions": [{"name": "backend", "level": "working"}, {"name": "testing", "level": "new"}]},
+            [{"dimension": "backend", "type": "explain", "score": 2.8, "observation": "Explained request validation and one failure case."}],
+        )
+        backend = next(item for item in profile["dimensions"] if item["name"] == "backend")
+        self.assertEqual(profile["calibration_status"], "evidence_calibrated")
+        self.assertEqual(backend["self_reported_level"], "working")
+        self.assertEqual(backend["demonstrated_level"], "reliable")
+        self.assertEqual(backend["status"], "demonstrated")
+        self.assertEqual(len(backend["evidence"]), 1)
+
+    def test_interview_planner_labels_reported_patterns_and_derives_questions_from_requirements(self):
+        module = load_module("upstack_interview_plan", INTERVIEW_PREP)
+        job = {"title": "Backend Engineer", "company": "ExampleCo", "level": "mid-level", "requirements": ["Design reliable APIs", "Python and SQL", "testing and debugging"], "ai_policy": "No AI during live interviews"}
+        sources = [{"id": "candidate-report-1", "source_type": "candidate_report", "role": "Backend Engineer", "level": "mid-level", "url": "https://example.test/report", "questions": ["Design a rate limiter"]}]
+        plan = module.build_plan(job, sources, self_assessment={"level": "working"})
+        self.assertEqual(plan["skill_profile"]["initial_hypothesis"], "emerging")
+        self.assertEqual(plan["evidence"][0]["evidence_class"], "high_confidence_public_pattern")
+        self.assertTrue(any(item["prediction_status"] == "reported_pattern_not_guarantee" for item in plan["question_bank"]))
+        self.assertTrue(any(item["prediction_status"] == "derived_from_supplied_requirements_not_guarantee" for item in plan["question_bank"]))
+        self.assertEqual(plan["practice_policy"]["ai_policy"], "No AI during live interviews")
+        self.assertEqual(plan["blueprint"][0]["id"], "stage-01-role-map")
+        self.assertEqual(len(plan["diagnostic_plan"]), 3)
+        with tempfile.TemporaryDirectory() as directory:
+            written = module.write_artifacts(plan, Path(directory))
+            self.assertIn("profile", written)
+            profile_text = Path(written["profile"]).read_text(encoding="utf-8")
+            self.assertIn("Learner Skill and Knowledge Profile", profile_text)
+            self.assertIn("backend", profile_text)
+            self.assertTrue(Path(written["requirements"]).exists())
+            self.assertTrue(Path(written["question_bank"]).exists())
+
+    def test_interview_feedback_preserves_attempt_and_requires_reasoned_correction(self):
+        module = load_module("upstack_interview_feedback", INTERVIEW_PREP)
+        question = {"id": "q-1", "prompt": "Design an API", "category": "system_design", "evidence_class": "verified_requirement"}
+        contract = module.build_feedback_contract(question, {"answer": "I would use a database.", "language": "text"}, "both")
+        self.assertTrue(contract["attempt_preserved"])
+        self.assertEqual(contract["output_mode"], "both")
+        self.assertIn("first_incorrect_assumption_or_step", contract["required_feedback"])
+        self.assertIn("trade_offs_and_when_each_approach_is_better", contract["required_feedback"])
+        self.assertIn("one_nearby_follow_up_for_transfer", contract["required_feedback"])
 
     def test_ui_design_helper_keeps_markdown_fallback_and_gates_remote_writes(self):
         module = load_module("upstack_ui_design", UI_DESIGN)

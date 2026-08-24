@@ -91,10 +91,16 @@ A local initialization creates a learner-owned `.upstack/` directory:
 ├── candidates/
 ├── source/
 ├── cache/
-└── design/
-   ├── BRIEF.md
-   ├── WIREFRAME.md
-   └── DESIGN.md
+├── design/
+│  ├── BRIEF.md
+│  ├── WIREFRAME.md
+│  └── DESIGN.md
+└── interview/
+   ├── JOB_REQUIREMENTS.md
+   ├── SKILL_PROFILE.md
+   ├── EVIDENCE_MAP.md
+   ├── INTERVIEW_BLUEPRINT.md
+   └── QUESTION_BANK.md
 ```
 
 `PROJECT_INVENTORY.md` is the ingredients list: runtime, language, frameworks, libraries, database, routes, modules, data flows, tests, CI, deployment, security boundaries, and unknowns. `REBUILD_BLUEPRINT.md` is the recipe: a sequence of small stages with outcomes, decisions, acceptance checks, proof questions, finish gates, limitations, and the evidence needed to unlock the next stage.
@@ -140,6 +146,28 @@ If the active host exposes a verified callable Stitch MCP and the learner choose
 ```bash
 python3 scripts/ui_design.py /path/to/brief.json --mode portable --write
 ```
+
+## Job preparation from real requirements
+
+For interview preparation, Upstack starts with the **actual job requirements**, not a generic question list. The learner can paste a job description, provide an official job-posting URL, point to a local recruiter or interview document, or give a clearly labelled summary. Upstack then asks about the role, level, interview horizon, process details, and whether AI assistance is allowed during the real process. Missing requirements remain visible as uncertainty rather than being filled with assumptions.
+
+Upstack also builds a learner profile. Self-reported experience is the initial hypothesis; small diagnostics test selected dimensions through explanation, code or system tracing, bounded implementation, debugging, design defense, or a structured project story. The profile records **self-reported** and **demonstrated** levels separately and updates by dimension. One difficult attempt does not permanently label a learner as beginner or advanced.
+
+The interview route researches read-only sources in an evidence hierarchy: the supplied job description and official employer guidance first, employer-authored interview or AI-use policies next, recent attributable candidate reports after that, and reputable role-pattern sources last. Public reports can reveal likely patterns, but Upstack never presents them as guaranteed upcoming questions or uses leaked, private, stolen, or confidential material.
+
+Each question includes its category, evidence class, source provenance, why it was selected, what capability it tests, and what a strong response should demonstrate. The learner can choose coached learning, mock interview, or assessment. After an attempt, Upstack preserves the original answer and explains the verdict, strengths, first incorrect assumption or step, why the gap matters, the smallest useful hint, acceptable approaches, trade-offs, verification, and a nearby follow-up for transfer. Feedback can be inline, saved as Markdown, or both.
+
+The deterministic planner is:
+
+```bash
+python3 scripts/interview_prep.py \\
+  --job-file /path/to/job.json \\
+  --sources-file /path/to/sources.json \\
+  --skill-profile-file /path/to/skill-profile.json \\
+  --mode plan
+```
+
+When writing is approved, Upstack stores the research and learning record under `.upstack/interview/`, including `JOB_REQUIREMENTS.md`, `SKILL_PROFILE.md`, `EVIDENCE_MAP.md`, `INTERVIEW_BLUEPRINT.md`, `QUESTION_BANK.md`, and feedback artifacts. The complete curriculum is mapped first; only the current question or bounded exercise is generated.
 
 ## Public project discovery
 

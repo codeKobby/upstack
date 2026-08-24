@@ -1,10 +1,10 @@
 ---
 name: upstack
-description: Guide learners to reverse engineer, understand, rebuild, and ship serious software projects from arbitrary repositories. Use for repository inventory, stack and concept mapping, learner-level calibration, adaptive build recipes, staged implementation, public GitHub project discovery, focused front-end or backend learning, and honest portfolio evidence.
+description: Guide learners to reverse engineer, understand, rebuild, and ship serious software projects from arbitrary repositories, and prepare for software-engineering jobs. Use for repository inventory, stack and concept mapping, learner-level calibration, adaptive build recipes, staged implementation, role and job-requirement mapping, evidence-backed interview preparation, focused technical practice, and honest portfolio evidence.
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.3.0"
+  version: "1.4.0"
   package: upstack
 ---
 
@@ -61,7 +61,7 @@ Use `.upstack/` for Upstack state. Do not create, modify, or delete it without t
 | `/upstack discover` | Search public repositories using metadata first, then enrich top candidates with README and targeted root files. |
 | `/upstack choose` | Select a candidate and record its source, license, difficulty, scope, and provenance. |
 | `/upstack source` | Separately confirm read-only reference, clone, fork, workspace creation, installation, and execution actions. |
-| `/upstack role` | Map a user-provided job description or skill requirement to project stages and evidence gaps. |
+| `/upstack role` | Map a user-provided job description or skill requirement to project stages, interview competencies, evidence gaps, and practice questions. |
 | `/upstack portfolio` | Generate portfolio documentation from observed learner work only. |
 | `/upstack status` | Show active project, focus, stage, evidence, uncertainty, and next action. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
@@ -96,10 +96,16 @@ Create `.upstack/` lazily with:
 ├── candidates/
 ├── source/
 ├── cache/
-└── design/
-   ├── BRIEF.md
-   ├── WIREFRAME.md
-   └── DESIGN.md
+├── design/
+│  ├── BRIEF.md
+│  ├── WIREFRAME.md
+│  └── DESIGN.md
+└── interview/
+   ├── JOB_REQUIREMENTS.md
+   ├── SKILL_PROFILE.md
+   ├── EVIDENCE_MAP.md
+   ├── INTERVIEW_BLUEPRINT.md
+   └── QUESTION_BANK.md
 ```
 
 Mark every conclusion as `observed`, `inferred`, or `unknown`, and attach a repository-relative source path, symbol, heading, or test when possible. Never present inference as fact.
@@ -160,6 +166,8 @@ orient → inventory → trace or product brief → design gate when graphical
 
 For a from-scratch graphical project, complete the local design gate before UI implementation: generate `BRIEF.md`, `WIREFRAME.md`, and `DESIGN.md`; review the primary journey and required states; then optionally use a verified callable Stitch MCP for visual exploration. Stitch is an accelerator, not a prerequisite. If used, ask for confirmation before remote project, screen, variant, or design-system writes and preserve approved decisions locally. Use `scripts/ui_design.py` after the learner approves persistence to create the portable artifacts. The helper never calls MCP or uploads data itself.
 
+For interview preparation, complete the requirements and learner-profile gate before selecting questions. Use `scripts/interview_prep.py` to keep requirement evidence, diagnostic evidence, and reported question patterns separate. The helper never browses or calls a question tool itself; the host agent must perform approved research and native question dispatch.
+
 Each stage must include one observable outcome, relevant concepts and source anchors, public files or interfaces, learner decisions, implementation task, approved checks, proof questions, finish gates, limitations, and the evidence needed to unlock the next stage.
 
 For reverse engineering, use:
@@ -178,6 +186,30 @@ Use modeling, coaching, scaffolding, reflection, and gradual fading. Start with 
 When the learner selects **build from scratch**, ask for destination before accepting a brief. Capture the problem, audience, primary outcome, constraints, intended stack, and primary user journey. Generate a portable low-fidelity Markdown wireframe even when a visual tool is available. Use `scripts/ui_design.py <brief.json> --mode portable --write` only after the learner has approved `.upstack/` persistence or the requested artifact destination.
 
 If the current host exposes a verified callable Stitch MCP and the learner chooses it, use the host’s native MCP tool directly rather than printing a pretend design result. Before any remote write, state the provider, exact tool action, project/screen destination, and sanitized data that will be sent, then obtain explicit confirmation. Use only the tools and schema exposed by that MCP. After a design is selected, copy its approved user-flow and design decisions into local `DESIGN.md`; do not make the remote canvas the only source of truth. If Stitch is unavailable, unauthorized, or declined, continue with the Markdown wireframe and design contract.
+
+## Prepare for a technical interview
+
+When the learner chooses interview preparation, do not begin with a generic question bank. Read `references/interview-research-notes.md` for the evidence hierarchy and use `scripts/interview_prep.py` as the deterministic planner.
+
+Follow this sequence:
+
+1. Collect the exact job description or requirements, company, role, level, interview horizon, process details, and the employer’s AI-use policy if known. Accept pasted text, a public job-posting URL, a local requirements file, or a clearly labelled learner summary. If the requirements are missing, say that the first plan is provisional.
+2. Collect the learner’s current skill and knowledge profile: self-reported level, technologies, projects, responsibilities, strengths, uncertainties, and target areas. Treat self-report as an initial hypothesis, not proof.
+3. Choose a small diagnostic for the selected requirements. Use an explanation, source trace, bounded implementation, debugging review, design defense, or structured project story. Record what the learner demonstrated and update the profile by dimension; never assign a permanent beginner/advanced label from one attempt.
+4. Research read-only. Search official job and interview pages first, then employer-authored policies or guides, then recent attributable candidate reports, then reputable role-pattern sources. Preserve URL, title, role/level fit, date, evidence excerpt, and confidence. Search results and candidate reports are patterns, not guaranteed upcoming questions. Never request, use, or imply access to leaked, stolen, private, or confidential interview material.
+5. Map the complete interview curriculum before practice, but generate only the current question or bounded exercise. Select categories from the actual requirements: coding and algorithms, system or component design, debugging and code reading, practical implementation or pair programming, role/domain knowledge, behavioral/project deep dive, AI-assisted engineering where relevant, and questions for the interviewer.
+6. Before presenting each question, explain what it tests, why it was selected, its evidence class, and what a strong response should demonstrate. In mock or assessment mode, let the learner attempt first. In coached mode, provide only the requested level of scaffold.
+7. After an attempt, preserve the original response and give a verdict, strengths, rubric evidence, the first incorrect assumption or step, why the gap matters, the smallest useful hint before a full correction, acceptable approaches, trade-offs and when each is better, a verification plan, and a nearby transfer follow-up. Do not silently replace the learner’s answer or present generated work as their experience.
+8. Ask whether feedback should be inline, Markdown, or both. When writing is approved, use `.upstack/interview/` artifacts such as `JOB_REQUIREMENTS.md`, `SKILL_PROFILE.md`, `EVIDENCE_MAP.md`, `INTERVIEW_BLUEPRINT.md`, `QUESTION_BANK.md`, `MOCK_LOG.md`, and `FEEDBACK.md`.
+
+The helper is read-only unless `--write` is supplied:
+
+```bash
+python3 scripts/interview_prep.py --job-file /path/to/job.json --sources-file /path/to/sources.json --mode plan
+python3 scripts/interview_prep.py --job-file /path/to/job.json --sources-file /path/to/sources.json --mode feedback --attempt-file /path/to/attempt.json --output-mode markdown --write
+```
+
+Do not claim that a question is “what the company will ask” unless the learner supplied an explicit official statement. Distinguish employer policy from practice policy: if live interview AI use is forbidden, run a no-AI mock; if it is explicitly allowed, practice reviewing and correcting AI-assisted work while keeping the learner accountable; if unknown, ask the learner to verify with the recruiter or official process instructions.
 
 ## Discover public repositories
 

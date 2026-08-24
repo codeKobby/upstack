@@ -8,6 +8,8 @@ The agent must begin with the learner’s intent. It must not inspect the curren
 
 After the intent answer, inspect only the context required by that route:
 
+- If the intent is interview preparation, what exact job requirements, role, level, interview horizon, and AI-use policy should guide the plan?
+- If the intent is interview preparation, what does the learner currently know and what can they demonstrate in a small diagnostic?
 - Is the selected project mode rebuild, scratch, clone, or study-only?
 - Is the selected destination a new local folder, isolated worktree, source-adjacent notes, portfolio repository later, or plan-only?
 - If code or artifacts will be local, what exact folder should hold them, and does its parent exist?
@@ -58,18 +60,21 @@ Use this order, with conditional branches:
 | Order | Question | Ask when |
 | ---: | --- | --- |
 | 1 | What would you like to accomplish first? | Always when the request is broad or the learner has not stated a goal. |
-| 2 | What kind of project work should we do? | For project-oriented goals; choose rebuild, scratch, clone-and-adapt, or study-only. |
-| 3 | Where should the project or artifacts live? | Immediately after project mode, before selecting a source or creating files. |
-| 4 | What exact local folder should hold the code or artifacts? | Whenever the destination involves local code, a clone, a worktree, or local notes; especially from a broad workspace. |
-| 5 | Confirm the resolved local destination. | Before creating files, scaffolding, cloning, branch/worktree state, or saving project state. |
-| 6 | What should we build from scratch? | Only for scratch mode when the learner has not supplied a brief. |
-| 7 | Which existing project should we use? | For rebuild, clone, or study mode when a source is not already selected. |
-| 8 | How should we design the user experience? | For a scratch project with a graphical interface; always offer portable Markdown and offer Stitch only when its MCP is verified callable. |
-| 9 | Where should we focus first? | After the project brief/source and design gate are known. |
-| 10 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
-| 11 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
-| 12 | How should Upstack guide you? | Before choosing scaffold and reveal depth. |
-| 13 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
+| 2 | What role or interview target should we prepare for? | For interview intent, before choosing source material. |
+| 3 | What job requirements should guide the preparation? | For interview intent; accept pasted requirements, official URL, local file, or a labelled summary. |
+| 4 | What is your current skill and knowledge level? | For interview intent, before selecting questions; treat it as an initial hypothesis to test. |
+| 5 | What kind of project work should we do? | For other project-oriented goals; choose rebuild, scratch, clone-and-adapt, or study-only. |
+| 6 | Where should the project or artifacts live? | Immediately after project mode, before selecting a source or creating files. |
+| 7 | What exact local folder should hold the code or artifacts? | Whenever the destination involves local code, a clone, a worktree, or local notes; especially from a broad workspace. |
+| 8 | Confirm the resolved local destination. | Before creating files, scaffolding, cloning, branch/worktree state, or saving project state. |
+| 9 | What should we build from scratch? | Only for scratch mode when the learner has not supplied a brief. |
+| 10 | Which existing project should we use? | For rebuild, clone, or study mode when a source is not already selected. |
+| 11 | How should we design the user experience? | For a scratch project with a graphical interface; always offer portable Markdown and offer Stitch only when its MCP is verified callable. |
+| 12 | Where should we focus first? | After the project brief/source and design gate are known. |
+| 13 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
+| 14 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
+| 15 | How should Upstack guide you? | Before choosing scaffold and reveal depth. |
+| 16 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
 
 Destination and project mode are distinct decisions. Never infer “clone,” “rebuild,” or “build from scratch” from the current working directory, a repository URL, or a portfolio goal. When the learner starts in a home directory, editor workspace, or other broad folder, ask for the exact local destination path instead of writing into that broad folder or silently selecting one of its children. Resolve relative paths against the stated workspace, reject `/`, the home directory, the broad workspace itself when it has no project markers, files, and paths whose parent does not exist, then show the resolved path. A valid path still requires explicit destination confirmation before any write. A destination choice does not authorize cloning, forking, branch/worktree creation, publishing, or file writes; those remain separate confirmations.
 
@@ -97,7 +102,7 @@ First ask, without inspecting the workspace:
 
 > What would you like to accomplish first?
 
-Offer the intent options above. After the outcome-specific question, ask the project mode and destination before asking for a source. If the route uses local code or artifacts, collect and confirm the exact destination path before selecting a source or creating files. For a scratch build, ask for the brief and UI-design path; for rebuild, clone, or study-only, ask for the existing source. This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
+Offer the intent options above. For interview preparation, ask the role, exact requirements, AI-use policy, and learner skill/knowledge profile before asking for a source or generic question. For other project outcomes, ask the project mode and destination before asking for a source. If the route uses local code or artifacts, collect and confirm the exact destination path before selecting a source or creating files. For a scratch build, ask for the brief and UI-design path; for rebuild, clone, or study-only, ask for the existing source. This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
 
 ### Known local repository
 
