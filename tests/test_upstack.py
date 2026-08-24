@@ -19,6 +19,7 @@ DISCOVERY = ROOT / "scripts" / "discover_github.py"
 DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
 DISCOVERY_PROJECTS = ROOT / "scripts" / "discover_projects.py"
 HOST_MATRIX = ROOT / "compatibility" / "hosts.json"
+VIDEO_EVIDENCE = ROOT / "scripts" / "video_evidence.py"
 
 
 def load_module(name: str, path: Path):
@@ -182,6 +183,45 @@ class UpstackTests(unittest.TestCase):
         module = load_module("upstack_discover_projects_extract", DISCOVERY_PROJECTS)
         links = module.extract_repository_links("See https://github.com/owner/demo/blob/main/src/app.tsx and https://gitlab.com/team/tool.git")
         self.assertEqual(links, ["https://github.com/owner/demo", "https://gitlab.com/team/tool"])
+
+    def test_video_evidence_builds_timestamped_repository_map(self):
+        module = load_module("upstack_video_evidence", VIDEO_EVIDENCE)
+        evidence = module.build_evidence(
+            {"url": "https://youtu.be/demo123", "title": "Build the API", "channel": "Builder"},
+            segments=[
+                {"start": "1:02", "title": "Authentication", "summary": "Wire the auth flow", "repository_paths": ["src/auth.ts"], "concepts": ["tokens"]},
+                {"start": 0, "title": "Setup", "summary": "Create the app"},
+            ],
+            repository={"full_name": "owner/demo", "url": "https://github.com/owner/demo", "paths": ["src/auth.ts", "src/app.ts"]},
+            focus=["authentication"],
+            concepts=["tokens"],
+            query="build a TypeScript API",
+        )
+        self.assertEqual(evidence["status"], "timestamped")
+        self.assertEqual([item["timestamp"] for item in evidence["segments"]], ["00:00", "01:02"])
+        self.assertEqual(evidence["segments"][1]["timestamp_url"], "https://www.youtube.com/watch?v=demo123&t=62s")
+        self.assertEqual(evidence["segments"][1]["repository_paths"], ["src/auth.ts"])
+        markdown = module.render_markdown(evidence)
+        self.assertIn("[01:02](https://www.youtube.com/watch?v=demo123&t=62s)", markdown)
+        self.assertIn("[`src/auth.ts`](../../src/auth.ts)", markdown)
+        self.assertIn("https://github.com/owner/demo", markdown)
+        self.assertEqual(evidence["side_effects"], [])
+
+    def test_video_evidence_keeps_metadata_only_when_timestamps_are_missing(self):
+        module = load_module("upstack_video_metadata_only", VIDEO_EVIDENCE)
+        evidence = module.build_evidence({"url": "https://www.youtube.com/watch?v=demo123", "title": "Demo"})
+        self.assertEqual(evidence["status"], "metadata_only")
+        self.assertEqual(evidence["segments"], [])
+        markdown = module.render_markdown(evidence)
+        self.assertIn("No verified chapter or transcript timestamps were supplied", markdown)
+        self.assertIn("https://www.youtube.com/watch?v=demo123", markdown)
+
+    def test_video_timestamp_parsing_accepts_clock_and_unit_forms(self):
+        module = load_module("upstack_video_timestamp_parsing", VIDEO_EVIDENCE)
+        self.assertEqual(module.parse_seconds("01:02"), 62)
+        self.assertEqual(module.parse_seconds("1h 2m 3s"), 3723)
+        self.assertEqual(module.parse_seconds(45), 45)
+        self.assertEqual(module.format_seconds(3723), "01:02:03")
 
     def test_discovery_interaction_separates_actions_from_candidate_selection(self):
         module = load_module("upstack_discovery_interaction", DISCOVERY_INTERACTION)

@@ -40,6 +40,7 @@ Every host should preserve `/upstack` or its equivalent explicit skill command. 
 | External documentation | Browser or optional documentation MCP | Repository-owned docs |
 | Architecture diagrams | Host-supported rendering or optional diagram MCP | Markdown/text map |
 | Job-role research | User-provided job description plus web search | Explicit skill requirements |
+| Video follow-along map | `video_evidence.py` with approved metadata, chapters, or reviewed markers | Canonical video URL with metadata-only status |
 
 GitHub CLI, web search, and MCPs are optional accelerators. Upstack must detect what exists, state what it will use, and provide a local or read-only fallback. It must not enable or create connectors automatically.
 
@@ -56,6 +57,8 @@ Hosts must preserve the following boundaries:
 - Hosts with verified multi-question support may receive a short chained native-question plan. Upstack chains only answer-independent questions, such as focus followed by time budget; it recomputes after dependent answers. Hosts without verified support use one question per call. OpenCode is one supported example, not a special requirement.
 - A native question tool is the only user-facing prompt for that turn; the agent must not print a duplicate prose list or expose controller metadata such as route reasons. For a chained native call, the returned question set is the only prompt; do not add prose questions before or after it.
 - Source provenance distinguishes `observed`, `inferred`, and `unknown`.
+- When a repository is found through a video, preserve the video source and generate a repository-local `.upstack/sources/video-map.md` when verified timestamps exist. Use ordinary HTTPS timestamp links and relative repository links so VS Code and other coding agents can open or read the same artifact.
+- Never invent timestamps or source anchors. Without chapters, transcript markers, or learner-reviewed timestamps, retain the video as `metadata_only` and ask before any media or transcript retrieval.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.
 - Upstack and Overflow keep separate state directories and exchange only compact context payloads.
 

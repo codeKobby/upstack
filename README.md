@@ -141,6 +141,12 @@ python3 scripts/discover_projects.py "serious TypeScript project for backend int
 
 YouTube and X are optional. They return a clear not-configured status unless `YOUTUBE_API_KEY` or `X_BEARER_TOKEN` is deliberately provided, and the host may instead supply web-search results through a JSON file. External mentions are bounded context signals, not proof of code quality, licensing, maintainability, or educational value.
 
+### Video-backed projects
+
+When a repository is found through a video, Upstack keeps both sources. It records the canonical video URL, title, channel or author, repository link, and evidence basis. If chapters, an approved transcript, or learner-reviewed markers are available, `scripts/video_evidence.py` generates `.upstack/sources/video-map.md` with clickable timestamp links, concept labels, and relative links to verified repository files. This lets the learner open a video segment, inspect the corresponding code, and request a source-cited lesson, hint, exercise, or assessment for that segment.
+
+The Markdown map is portable across agents. VS Code supports relative Markdown links and workspace/file path navigation, while other coding agents can read the same links as ordinary Markdown. Upstack never invents timestamps or source anchors; without verified segment data it preserves a metadata-only video record and leaves timestamp enrichment for a later approved step.
+
 ```text
 /upstack discover serious TypeScript projects for an emerging full-stack developer
 /upstack discover projects that teach React, APIs, testing, and databases --count 5

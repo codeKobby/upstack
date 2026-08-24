@@ -27,6 +27,8 @@ Use the following preference order:
 
 Use `scripts/discover_projects.py` to coordinate these sources. External sources are context leads: extract repository URLs, canonicalize them, verify them through repository metadata and README, and retain the source URL, author/channel, timestamp, query, and extraction basis. If an API is unavailable or credentials are absent, report `not_configured` and use host web search or a user-provided JSON result file; do not scrape around access limits.
 
+When a result includes a project video, pass its metadata and approved chapters or reviewed transcript markers to `scripts/video_evidence.py`. Generate a repository-local `.upstack/sources/video-map.md` with ordinary HTTPS timestamp links, relative repository anchors, concepts, and lesson/exercise keys. Keep a `metadata_only` record when timestamps are unavailable. Do not download media, retrieve transcripts, or publish derived artifacts without explicit approval.
+
 MCPs are optional. Never ask the learner to configure an MCP merely to use local Upstack. When an MCP is relevant, state the capability it provides, what data it can access, whether it can write externally, and what the fallback is. Inspect current connector availability before recommending configuration; do not enable or create connectors automatically.
 
 ## User-facing route announcements

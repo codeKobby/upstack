@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "0.6.0"
+  version: "0.7.0"
   package: upstack
 ---
 
@@ -187,6 +187,23 @@ Use `scripts/discovery_interaction.py` to build and resolve the shortlist-action
 
 Repository metadata is the first stage, not the entire analysis. README and targeted content enrich and verify the shortlist. Stars and forks are popularity signals, not proof of educational quality or maintainability. An absent or unclear license must remain visible as a risk.
 
+## Use videos as learning evidence
+
+When a project is discovered through a video, preserve the video as part of the source record instead of returning only the repository URL. Save the canonical video URL, title, channel or author, publication date when available, repository link, and the evidence basis. If chapters, a host-approved transcript, or learner-reviewed markers are available, create timestamp links for each meaningful segment and map them to verified repository paths, concepts, and the next lesson or exercise.
+
+Use `scripts/video_evidence.py` to generate a repository-local Markdown map. The helper accepts metadata and segment files supplied by the host or learner, never downloads or executes media, and writes normal HTTPS timestamp links plus relative links to repository files. It labels the result `timestamped` only when timestamp data exists; otherwise it preserves a `metadata_only` record and asks the learner or agent to add verified markers later. Never invent timestamps, source paths, or claims about what the video teaches.
+
+```bash
+python3 scripts/video_evidence.py "https://www.youtube.com/watch?v=VIDEO_ID" \
+  --metadata-file /tmp/video-metadata.json \
+  --segments-file /tmp/video-segments.json \
+  --repository-file /tmp/repository-anchors.json \
+  --focus authentication --concept token-validation \
+  --output .upstack/sources/video-map.md
+```
+
+The generated Markdown is portable across coding agents. VS Code can open relative links from the workspace or current Markdown file and supports link/path navigation; other hosts can read the same links as ordinary Markdown. Use the timestamp map as a companion to source-cited Overflow lessons, hints, exercises, and assessments rather than treating the video as a substitute for inspecting the code.
+
 The helpers prefer GitHub CLI when available. `discover_projects.py` can use `gh search repos`, `gh repo read-file`, and `gh repo read-dir` without cloning, and falls back to the public GitHub REST API. YouTube and X are optional: use `YOUTUBE_API_KEY` and `X_BEARER_TOKEN` only when configured, never print them, and report `not_configured` with a host web-search fallback when absent. Do not require GitHub CLI, YouTube credentials, X credentials, or an MCP for local Upstack workflows.
 
 ## Prepare a selected source safely
@@ -248,6 +265,7 @@ python3 scripts/onboarding.py . --json
 python3 scripts/inventory_repo.py . --output .upstack/PROJECT_INVENTORY.md
 python3 scripts/discover_github.py "typescript fullstack" --count 3 --output .upstack/candidates/search.json
 python3 scripts/discover_projects.py "serious TypeScript project for backend interview practice" --stack TypeScript --focus "backend APIs" --signal "backend depth" --output .upstack/candidates/cross-source.json
+python3 scripts/video_evidence.py "https://www.youtube.com/watch?v=VIDEO_ID" --segments-file /tmp/video-segments.json --repository-file /tmp/repository-anchors.json --output .upstack/sources/video-map.md
 ```
 
 Helpers are read-only unless a command explicitly writes a requested report. They are not substitutes for judgment. Never claim a repository was indexed, a README was read, a command ran, or a candidate was ranked unless the host produced evidence.

@@ -143,6 +143,16 @@ GET /repos/OWNER/REPO/contents/PATH
 
 Cache discovery reports by query, candidate full name, default branch, and observed SHA. Reuse fresh metadata and README content until the source reference changes. Do not cache credentials or private source content in a public artifact.
 
+## Video-backed project evidence
+
+If an external result includes a video that explains, demonstrates, or builds the candidate repository, retain the video as a first-class source. Record its canonical URL, title, channel or author, publication date when available, repository link, and evidence basis. Prefer chapters, host-approved transcript segments, or learner-reviewed markers for timestamps. A timestamp link should use the video platform’s supported start-time format and should preserve the canonical video identity.
+
+Use `scripts/video_evidence.py` to create `.upstack/sources/video-map.md`. Each segment may link to a verified repository-relative path, concept ID, and next lesson or exercise. Mark mappings as observed when directly anchored by the supplied segment and repository evidence; mark them inferred when matched by terms or agent analysis. Never invent timestamps, source paths, chapter titles, or claims that the video teaches a concept.
+
+If no chapters, transcript, or reviewed markers are available, keep the video metadata and link but mark the source `metadata_only`. The learner or host can add a reviewed marker list later. Video downloads, transcript retrieval, media conversion, and external publication require explicit approval and are separate from read-only discovery.
+
+Generated Markdown should use ordinary HTTPS timestamp links and safe relative repository links so VS Code can open them from the workspace or current Markdown file and other coding agents can still read them as portable text. A video is supporting evidence and a follow-along aid; it does not replace repository README, license, source, or test verification.
+
 ## Fork and clone boundaries
 
 Selection is not permission to modify the user’s account or disk. Ask separately before:
