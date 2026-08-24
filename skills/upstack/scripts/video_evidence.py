@@ -112,6 +112,7 @@ def normalize_segment(segment: dict[str, Any], index: int) -> dict[str, Any] | N
     concepts = [_clean_text(item) for item in segment.get("concepts", []) if _clean_text(item)]
     repo_paths = [_safe_relative_path(str(item)) for item in segment.get("repository_paths", segment.get("repo_paths", []))]
     repo_paths = [item for item in repo_paths if item]
+    lesson_path = _safe_relative_path(str(segment.get("lesson_path") or segment.get("lesson_file") or ""))
     return {
         "index": index,
         "start_seconds": start,
@@ -120,6 +121,7 @@ def normalize_segment(segment: dict[str, Any], index: int) -> dict[str, Any] | N
         "summary": summary,
         "concepts": concepts,
         "repository_paths": repo_paths,
+        "lesson_path": lesson_path,
         "evidence_basis": _clean_text(segment.get("evidence_basis") or "provided timestamp"),
     }
 
@@ -225,7 +227,7 @@ def render_markdown(evidence: dict[str, Any], *, repo_link_prefix: str = "../../
     if not segments:
         lines.extend(["## Timestamp map", "", "No verified chapter or transcript timestamps were supplied. Keep the video link, then add timestamps only from chapters, a transcript, or a learner-reviewed marker list.", ""])
         return "\n".join(lines)
-    lines.extend(["## Timestamp map", "", "| Time | Segment | Repository anchor | Learning use |", "| --- | --- | --- | --- |"])
+    lines.extend(["## Timestamp map", "", "| Time | Segment | Repository anchor | Lesson artifact | Learning use |", "| --- | --- | --- | --- | --- |"])
     for segment in segments:
         title = _markdown_escape(segment["title"])
         time_link = f"[{segment['timestamp']}]({segment['timestamp_url']})"
@@ -233,8 +235,10 @@ def render_markdown(evidence: dict[str, Any], *, repo_link_prefix: str = "../../
         for path in segment.get("repository_paths") or []:
             anchors.append(f"[`{_markdown_escape(path)}`]({repo_link_prefix}{path})")
         anchor_text = ", ".join(anchors) or "—"
+        lesson_path = segment.get("lesson_path") or ""
+        lesson_text = f"[`{_markdown_escape(lesson_path)}`]({repo_link_prefix}{lesson_path})" if lesson_path else "—"
         use = _markdown_escape(segment.get("summary") or ", ".join(segment.get("concepts") or []) or "Review and explain this segment")
-        lines.append(f"| {time_link} | {title} | {anchor_text} | {use} |")
+        lines.append(f"| {time_link} | {title} | {anchor_text} | {lesson_text} | {use} |")
     lines.extend(["", "## Suggested workflow", "", "1. Open the timestamp link and follow the segment without copying blindly.", "2. Open the repository anchor and identify the corresponding implementation or missing seam.", "3. Write a short explanation or attempt in the learner workspace.", "4. Ask Upstack or Overflow for a source-cited lesson, hint, or assessment using the segment key.", ""])
     return "\n".join(lines)
 
@@ -249,7 +253,8 @@ def main() -> int:
     parser.add_argument("--concept", action="append", default=[])
     parser.add_argument("--query", default="")
     parser.add_argument("--repo-link-prefix", default="../../")
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True, help="write the portable Markdown map")
+    parser.add_argument("--json-output", type=Path, help="also write structured video evidence JSON for the VS Code companion")
     args = parser.parse_args()
     video: dict[str, Any] = {"url": args.video_url}
     if args.metadata_file:
@@ -265,7 +270,10 @@ def main() -> int:
     evidence = build_evidence(video, segments=segments, repository=repository, focus=args.focus, concepts=args.concept, query=args.query)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(render_markdown(evidence, repo_link_prefix=args.repo_link_prefix), encoding="utf-8")
-    print(json.dumps({"output": str(args.output), "status": evidence["status"], "segments": len(evidence["segments"]), "video_id": evidence["video"]["video_id"]}, indent=2))
+    if args.json_output:
+        args.json_output.parent.mkdir(parents=True, exist_ok=True)
+        args.json_output.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"output": str(args.output), "json_output": str(args.json_output) if args.json_output else None, "status": evidence["status"], "segments": len(evidence["segments"]), "video_id": evidence["video"]["video_id"]}, indent=2))
     return 0
 
 

@@ -20,6 +20,7 @@ DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
 DISCOVERY_PROJECTS = ROOT / "scripts" / "discover_projects.py"
 HOST_MATRIX = ROOT / "compatibility" / "hosts.json"
 VIDEO_EVIDENCE = ROOT / "scripts" / "video_evidence.py"
+VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
 def load_module(name: str, path: Path):
@@ -184,12 +185,26 @@ class UpstackTests(unittest.TestCase):
         links = module.extract_repository_links("See https://github.com/owner/demo/blob/main/src/app.tsx and https://gitlab.com/team/tool.git")
         self.assertEqual(links, ["https://github.com/owner/demo", "https://gitlab.com/team/tool"])
 
+    def test_vscode_companion_manifest_and_security_contract(self):
+        manifest = json.loads((VSCODE_EXTENSION / "package.json").read_text(encoding="utf-8"))
+        extension = (VSCODE_EXTENSION / "src" / "extension.ts").read_text(encoding="utf-8")
+        self.assertEqual(manifest["name"], "upstack-video-companion")
+        commands = {item["command"] for item in manifest["contributes"]["commands"]}
+        self.assertEqual(commands, {"upstackVideo.open", "upstackVideo.generateMap"})
+        self.assertIn("upstackVideo.videoMap", manifest["contributes"]["configuration"]["properties"])
+        self.assertIn("youtube-nocookie.com", extension)
+        self.assertIn("Content-Security-Policy", extension)
+        self.assertIn("isInsideWorkspace", extension)
+        self.assertIn("video-progress.json", extension)
+        self.assertNotIn("workspace.fs.writeFile", extension)
+        self.assertNotIn("executeCommand", extension)
+
     def test_video_evidence_builds_timestamped_repository_map(self):
         module = load_module("upstack_video_evidence", VIDEO_EVIDENCE)
         evidence = module.build_evidence(
             {"url": "https://youtu.be/demo123", "title": "Build the API", "channel": "Builder"},
             segments=[
-                {"start": "1:02", "title": "Authentication", "summary": "Wire the auth flow", "repository_paths": ["src/auth.ts"], "concepts": ["tokens"]},
+                {"start": "1:02", "title": "Authentication", "summary": "Wire the auth flow", "repository_paths": ["src/auth.ts"], "lesson_path": ".upstack/lessons/auth.md", "concepts": ["tokens"]},
                 {"start": 0, "title": "Setup", "summary": "Create the app"},
             ],
             repository={"full_name": "owner/demo", "url": "https://github.com/owner/demo", "paths": ["src/auth.ts", "src/app.ts"]},
@@ -204,6 +219,7 @@ class UpstackTests(unittest.TestCase):
         markdown = module.render_markdown(evidence)
         self.assertIn("[01:02](https://www.youtube.com/watch?v=demo123&t=62s)", markdown)
         self.assertIn("[`src/auth.ts`](../../src/auth.ts)", markdown)
+        self.assertIn("[`.upstack/lessons/auth.md`](../../.upstack/lessons/auth.md)", markdown)
         self.assertIn("https://github.com/owner/demo", markdown)
         self.assertEqual(evidence["side_effects"], [])
 

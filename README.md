@@ -147,6 +147,10 @@ When a repository is found through a video, Upstack keeps both sources. It recor
 
 The Markdown map is portable across agents. VS Code supports relative Markdown links and workspace/file path navigation, while other coding agents can read the same links as ordinary Markdown. Upstack never invents timestamps or source anchors; without verified segment data it preserves a metadata-only video record and leaves timestamp enrichment for a later approved step.
 
+For VS Code users, the repository includes an optional companion extension under [`vscode-extension/`](vscode-extension/). It opens a panel beside the code, embeds a recognized YouTube player when enabled, jumps to selected timestamps, highlights the active segment as playback advances, opens verified repository anchors, and stores local completion/current-segment state in `.upstack/sources/video-progress.json`. The extension is an adapter rather than a requirement: all other agents use the same Markdown and JSON maps.
+
+The companion does not modify source code, download media, upload repository content, or invent mappings. It uses a restrictive webview policy, validates workspace-relative paths, and requires explicit learner interaction for progress writes. To enable it, package or install the extension through the normal VS Code extension workflow; the portable Upstack skill remains usable without it.
+
 ```text
 /upstack discover serious TypeScript projects for an emerging full-stack developer
 /upstack discover projects that teach React, APIs, testing, and databases --count 5

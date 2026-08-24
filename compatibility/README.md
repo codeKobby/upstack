@@ -59,6 +59,7 @@ Hosts must preserve the following boundaries:
 - Source provenance distinguishes `observed`, `inferred`, and `unknown`.
 - When a repository is found through a video, preserve the video source and generate a repository-local `.upstack/sources/video-map.md` when verified timestamps exist. Use ordinary HTTPS timestamp links and relative repository links so VS Code and other coding agents can open or read the same artifact.
 - Never invent timestamps or source anchors. Without chapters, transcript markers, or learner-reviewed timestamps, retain the video as `metadata_only` and ask before any media or transcript retrieval.
+- VS Code users may install the optional `vscode-extension/` companion. It reads `.upstack/sources/video-map.json`, embeds a recognized YouTube player when enabled, jumps to segment timestamps, highlights the active segment, opens repository and lesson anchors, and stores local progress in `.upstack/sources/video-progress.json`. This adapter is not required by Upstack and does not change the behavior of other hosts.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.
 - Upstack and Overflow keep separate state directories and exchange only compact context payloads.
 

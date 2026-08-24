@@ -1,0 +1,68 @@
+{
+  "name": "upstack-video-companion",
+  "displayName": "Upstack Video Companion",
+  "description": "Open Upstack video learning maps beside repository code with timestamped segments and local progress.",
+  "version": "0.1.0",
+  "publisher": "codeKobby",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeKobby/upstack.git",
+    "directory": "vscode-extension"
+  },
+  "files": [
+    "out/**",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCommand:upstackVideo.open",
+    "onCommand:upstackVideo.generateMap"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "upstackVideo.open",
+        "title": "Upstack: Open Video Companion"
+      },
+      {
+        "command": "upstackVideo.generateMap",
+        "title": "Upstack: Generate Video Map"
+      }
+    ],
+    "configuration": {
+      "title": "Upstack Video Companion",
+      "properties": {
+        "upstackVideo.videoMap": {
+          "type": "string",
+          "default": ".upstack/sources/video-map.json",
+          "description": "Workspace-relative video evidence JSON file used by the companion panel."
+        },
+        "upstackVideo.allowRemotePlayer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow the companion webview to load the configured YouTube iframe player."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "check": "tsc -p ./ --noEmit",
+    "package": "npm run compile && npx --yes @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
