@@ -1,6 +1,6 @@
 {
   "name": "upstack",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, metadata-first GitHub discovery, and honest portfolio evidence.",
   "author": {
     "name": "codeKobby",
