@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.0.0"
+  version: "1.0.1"
   package: upstack
 ---
 

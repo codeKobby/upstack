@@ -63,16 +63,18 @@ def is_installed(extensions: list[str], extension_id: str = EXTENSION_ID) -> boo
     return any(value.casefold() == target for value in extensions)
 
 
-def choose_source(vsix: str | None, marketplace_id: str) -> dict[str, Any]:
+def choose_source(vsix: str | None, marketplace_id: str, marketplace_available: bool) -> dict[str, Any]:
     if vsix:
         path = Path(vsix).expanduser().resolve()
         return {"kind": "vsix", "value": str(path), "exists": path.is_file(), "command_value": str(path)}
-    return {"kind": "marketplace", "value": marketplace_id, "exists": None, "command_value": marketplace_id}
+    if marketplace_available:
+        return {"kind": "marketplace", "value": marketplace_id, "exists": None, "command_value": marketplace_id}
+    return {"kind": "unavailable", "value": marketplace_id, "exists": False, "command_value": ""}
 
 
-def build_plan(host: str | None = None, vsix: str | None = None, marketplace_id: str = DEFAULT_MARKETPLACE_ID) -> dict[str, Any]:
+def build_plan(host: str | None = None, vsix: str | None = None, marketplace_id: str = DEFAULT_MARKETPLACE_ID, marketplace_available: bool = False) -> dict[str, Any]:
     detected = detect_host(host)
-    source = choose_source(vsix, marketplace_id)
+    source = choose_source(vsix, marketplace_id, marketplace_available)
     extensions, list_error = list_installed(detected.get("cli"))
     installed = is_installed(extensions, marketplace_id) if not list_error else False
     if not detected["detected"]:
@@ -87,6 +89,9 @@ def build_plan(host: str | None = None, vsix: str | None = None, marketplace_id:
     elif source["kind"] == "vsix" and not source["exists"]:
         status = "vsix_missing"
         reason = "The supplied VSIX path does not exist; do not attempt installation."
+    elif source["kind"] == "unavailable":
+        status = "marketplace_unavailable"
+        reason = "The companion is not installed and is not yet available from the Marketplace. Provide a local VSIX path or continue with the portable video map."
     else:
         status = "ready_for_confirmation"
         reason = "The companion is not installed. Ask the learner for explicit confirmation before running the installation command."
@@ -128,10 +133,11 @@ def main() -> int:
     parser.add_argument("--host", help="host identifier; use vscode or vscode-insiders when known")
     parser.add_argument("--vsix", help="local VSIX path; otherwise use the Marketplace extension identifier")
     parser.add_argument("--marketplace-id", default=DEFAULT_MARKETPLACE_ID)
+    parser.add_argument("--marketplace-available", action="store_true", help="use the Marketplace source only after publication has been verified")
     parser.add_argument("--confirm", action="store_true", help="explicitly authorize the local VS Code installation")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    result = install(build_plan(args.host, args.vsix, args.marketplace_id), args.confirm)
+    result = install(build_plan(args.host, args.vsix, args.marketplace_id, args.marketplace_available), args.confirm)
     if args.json:
         print(json.dumps(result, indent=2))
     else:

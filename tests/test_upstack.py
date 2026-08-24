@@ -197,6 +197,10 @@ class UpstackTests(unittest.TestCase):
                 plan = module.build_plan(host="vscode", vsix=handle.name)
             self.assertEqual(plan["status"], "ready_for_confirmation")
             self.assertTrue(plan["requires_confirmation"])
+            with patch.object(module.shutil, "which", return_value="/usr/bin/code"):
+                marketplace_plan = module.build_plan(host="vscode", marketplace_available=False)
+            self.assertEqual(marketplace_plan["status"], "marketplace_unavailable")
+            self.assertFalse(marketplace_plan["requires_confirmation"])
             declined = module.install(plan, confirmed=False)
             self.assertEqual(declined["install_result"], "confirmation_required")
             self.assertFalse(declined["install_attempted"])

@@ -149,7 +149,9 @@ The Markdown map is portable across agents. VS Code supports relative Markdown l
 
 For VS Code users, the repository includes an optional companion extension under [`vscode-extension/`](vscode-extension/). It opens a panel beside the code, embeds a recognized YouTube player when enabled, jumps to selected timestamps, highlights the active segment as playback advances, opens verified repository anchors, and stores local completion/current-segment state in `.upstack/sources/video-progress.json`. The extension is an adapter rather than a requirement: all other agents use the same Markdown and JSON maps.
 
-The companion does not modify source code, download media, upload repository content, or invent mappings. It uses a restrictive webview policy, validates workspace-relative paths, and requires explicit learner interaction for progress writes. To enable it, package or install the extension through the normal VS Code extension workflow; the portable Upstack skill remains usable without it.
+The companion does not modify source code, download media, upload repository content, or invent mappings. It uses a restrictive webview policy, validates workspace-relative paths, and requires explicit learner interaction for progress writes. To enable it, install the extension through the normal VS Code extension workflow; the portable Upstack skill remains usable without it.
+
+When Upstack detects a VS Code host, it can run `scripts/install_video_companion.py --host HOST_ID --json`. If a published Marketplace listing is verified, or the learner supplies an existing local VSIX, Upstack asks one explicit confirmation question containing the exact source and command. It installs only after approval. Until the companion is published to the Marketplace, the helper reports `marketplace_unavailable` when no VSIX is supplied and continues with the portable map instead of offering a dead Marketplace command.
 
 ```text
 /upstack discover serious TypeScript projects for an emerging full-stack developer

@@ -31,6 +31,8 @@ When a result includes a project video, pass its metadata and approved chapters 
 
 The optional `vscode-extension/` companion reads the structured JSON map, embeds a recognized YouTube player through a restricted VS Code webview, seeks to selected timestamps, highlights the current segment, opens repository or lesson anchors, and writes only `.upstack/sources/video-progress.json` after explicit learner interactions. It is not required for other agents, and it must not be described as installed without host evidence.
 
+Use `scripts/install_video_companion.py --host HOST_ID --json` to detect the VS Code launcher and installed extension. Treat `marketplace_available` as false until the Marketplace listing has been independently verified. Without a verified listing, only a learner-provided existing VSIX can produce `ready_for_confirmation`; otherwise report the portable fallback. Ask exactly once for confirmation with the exact install source and command, run with `--confirm` only after approval, and report command output.
+
 MCPs are optional. Never ask the learner to configure an MCP merely to use local Upstack. When an MCP is relevant, state the capability it provides, what data it can access, whether it can write externally, and what the fallback is. Inspect current connector availability before recommending configuration; do not enable or create connectors automatically.
 
 ## User-facing route announcements
