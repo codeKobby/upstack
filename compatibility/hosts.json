@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -23,10 +23,13 @@
     "gate": "scripts/project_state.py --command SUBCOMMAND",
     "identity": ".upstack/PROJECT.json",
     "state": ".upstack/STATE.json",
-    "known_project": "load-and-resume; do-not-restart-onboarding",
+    "known_project": "load-pointers-and-resume; do-not-restart-onboarding",
     "unknown_project": "route-through-onboarding-before-project-command",
+    "state_pointers": ["project_root", "workspace_root", "destination", "source", "curriculum", "current_lesson", "design", "history_file"],
+    "installed_skill_path_guard": "step-out-to-containing-workspace;-global-skill-path-is-not-a-project",
     "broad_workspace": "ask-for-explicit-project-path; never-select-child-implicitly",
-    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update"]
+    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update"],
+    "history": ".upstack/HISTORY.jsonl"
   },
   "package_manager_policy": {
     "new_js_ts_default": "recommend-pnpm-then-ask",

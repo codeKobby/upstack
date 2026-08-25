@@ -1,6 +1,6 @@
 # Project State and Command Gate
 
-Upstack is project-aware. Every command first resolves the requested path to a canonical project root and then reads the project’s persisted state before performing workflow logic.
+Upstack is project-aware. Every command first resolves the requested path to a canonical project root and then reads the project’s persisted state before performing workflow logic. The host’s opened workspace or command path is the learner context; the installed `SKILL.md` directory is a resource path, never the default learner project.
 
 ## Resolution order
 
@@ -33,6 +33,7 @@ A confirmed initialization writes:
 .upstack/SESSION_HANDOFF.md   human-readable handoff and continuation record
 .upstack/PRODUCT_BRIEF.md   learner-approved product contract
 .upstack/PACKAGE_MANAGER.md selected/detected package-manager contract
+.upstack/HISTORY.jsonl       append-only session, lesson, evidence, and handoff events
 .upstack/lessons/plan.json  complete curriculum with current and locked stages
 .upstack/lessons/CURRICULUM.md
 .upstack/lessons/LESSON_BLUEPRINT.md
@@ -42,11 +43,17 @@ A confirmed initialization writes:
 
 State is written only after explicit confirmation or an explicit write command. The tutor records attempts without unlocking by default. To unlock a stage, the learner must provide an attempt, approved verification, an explanation or teach-back, and feedback. Incomplete evidence leaves the same stage active. The selected or detected package manager and its read-only evidence are persisted in `STATE.json` and `PACKAGE_MANAGER.md` so later commands and lessons use the same manager.
 
+### Pointer and resume contract
+
+`STATE.json` must include a `pointers` object containing absolute canonical paths for `project_root`, `workspace_root`, `destination`, the state and project files, the curriculum artifacts, the current lesson, the design artifacts, and `HISTORY.jsonl`. Its `source` pointer records the selected local source path or public repository URL when one exists. Its `current_lesson` pointer records the stable lesson ID, sequence, title, generation status, and `CURRENT_LESSON.md` path when generated. Its `design` pointer records the portable design artifacts and whether Stitch was selected, pending confirmation, available, unavailable, or completed. The state also retains a bounded `history` list while `HISTORY.jsonl` preserves the event trail.
+
+On a new session, the gate must return the pointer and resume context before any onboarding question. If the input path is inside `.agents/skills/<skill>`, `.opencode/skills/<skill>`, `.claude/skills/<skill>`, `.cline/skills/<skill>`, `.clinerules/skills/<skill>`, `.github/skills/<skill>`, or `.agent/skills/<skill>`, step out to the containing workspace and resolve its `.upstack` state. A global installed skill path without a learner project must remain a broad/resource context. Never analyze the installed skill’s own scripts or references as the learner project unless the learner explicitly names that directory.
+
 ## Command behavior
 
 | Gate result | Behavior |
 | --- | --- |
-| `known_project` | Show or use the persisted project and resume the requested command. |
+| `known_project` | Show or use the persisted project pointers and resume the requested command without onboarding. |
 | `onboarding_required` | Preserve the request, complete onboarding, and ask before creating state. |
 | `project_selection_required` | Ask for an explicit local project path; do not infer a child directory. |
 | `intent_required` | Ask the context-independent intent question before inspecting workspace contents. |

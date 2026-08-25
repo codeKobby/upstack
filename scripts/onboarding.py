@@ -18,6 +18,13 @@ try:
 except ImportError:
     package_manager_plan = None
 
+try:
+    from project_state import command_gate, installed_skill_context, resolve_project_root
+except ImportError:
+    command_gate = None
+    installed_skill_context = None
+    resolve_project_root = None
+
 
 PROJECT_MARKERS = {
     "package.json",
@@ -94,19 +101,38 @@ def _persisted_upstack_state(project: str | None) -> dict[str, Any] | None:
 
 def context(path: Path) -> dict[str, Any]:
     path = path.expanduser().resolve()
-    root = _git_root(path)
+    detected_root, detection = resolve_project_root(path) if resolve_project_root else (None, "unavailable")
+    root = str(detected_root) if detected_root else _git_root(path)
     project = root or (str(path) if _has_project_markers(path) else None)
+    gate = command_gate(path, "onboarding") if command_gate else None
+    if gate and gate.get("status") == "known_project":
+        project = gate.get("project_root") or project
+        detection = gate.get("detection") or detection
+    skill_context = installed_skill_context(path) if installed_skill_context else {"skill_root": None, "project_root": None}
     persisted = _persisted_upstack_state(project)
+    gate_resume = gate.get("resume_context") if gate and gate.get("status") == "known_project" else {}
     return {
         "cwd": str(path),
         "is_home": _is_home(path),
         "is_project_context": bool(project),
         "is_broad_workspace": not bool(project),
         "project_root": project,
-        "local_candidates": _local_candidates(path),
+        "resolution": detection,
+        "skill_resource_path": skill_context.get("skill_root"),
+        "local_candidates": _local_candidates(Path(project) if project else path),
         "state_path": str(Path(project) / ".upstack") if project else None,
         "package_manager": package_manager_plan(project) if project and package_manager_plan else None,
         "known_upstack_project": bool(persisted),
+        "resume_context": {
+            "project_root": gate_resume.get("project_root") or (persisted.get("pointers", {}).get("project_root") if isinstance(persisted.get("pointers"), dict) else project),
+            "workspace_root": gate_resume.get("workspace_root") or (persisted.get("pointers", {}).get("workspace_root") if isinstance(persisted.get("pointers"), dict) else None),
+            "source": gate_resume.get("source") or (persisted.get("pointers", {}).get("source") if isinstance(persisted.get("pointers"), dict) else None),
+            "curriculum": gate_resume.get("curriculum") or persisted.get("curriculum") or (persisted.get("pointers", {}).get("curriculum") if isinstance(persisted.get("pointers"), dict) else None),
+            "current_lesson": gate_resume.get("current_lesson") or persisted.get("current_lesson") or (persisted.get("pointers", {}).get("current_lesson") if isinstance(persisted.get("pointers"), dict) else None),
+            "design": gate_resume.get("design") or persisted.get("design") or (persisted.get("pointers", {}).get("design") if isinstance(persisted.get("pointers"), dict) else None),
+            "history_file": gate_resume.get("history_file") or (persisted.get("pointers", {}).get("history_file") if isinstance(persisted.get("pointers"), dict) else None),
+            "next_action": gate_resume.get("next_action") or (persisted.get("next_action") if persisted else None),
+        } if persisted else None,
         "persisted_state": {
             "project_id": persisted.get("project_id"),
             "mode": persisted.get("mode"),
@@ -116,8 +142,11 @@ def context(path: Path) -> dict[str, Any]:
             "next_action": persisted.get("next_action"),
             "active_directive": persisted.get("active_directive"),
             "updated_at": persisted.get("updated_at"),
+            "current_lesson": persisted.get("current_lesson"),
+            "design": persisted.get("design"),
+            "history_count": len(persisted.get("history", [])) if isinstance(persisted.get("history"), list) else 0,
         } if persisted else None,
-        "provenance": "read-only path, marker, and optional Upstack-state inspection; no project code executed",
+        "provenance": "read-only path, marker, shared project-state, and optional Upstack-state inspection; no project code executed",
     }
 
 
@@ -546,6 +575,8 @@ def _public_source_question() -> dict[str, Any]:
 def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[str, Any] | None:
     """Return the next question without inspecting context before the intent gate."""
     ctx = ctx or intent_context()
+    if ctx.get("known_upstack_project") and not answers.get("force_onboarding"):
+        return None
     goal = str(answers.get("goal", "")).lower()
     project_mode = str(answers.get("project_mode", "")).lower()
     source = str(answers.get("source", "")).lower()
@@ -735,6 +766,22 @@ def question_plan(
     """Build a host-neutral delivery plan from verified question capabilities."""
     if question_mode not in {"auto", "native-single", "native-multi"}:
         raise ValueError(f"unsupported question mode: {question_mode}")
+    if ctx and ctx.get("known_upstack_project") and not answers.get("force_onboarding"):
+        return {
+            "host": host,
+            "mode": "resume-known-project",
+            "questions": [],
+            "resume": True,
+            "resume_context": ctx.get("resume_context"),
+            "delivery": {
+                "required_action": "load_persisted_project_and_resume",
+                "native_tool": None,
+                "send_only": "none",
+                "prose_prompt_allowed": False,
+                "fallback": "show_persisted_next_action_without_restarting_onboarding",
+                "must_not": ["restart-initial-intent", "create-second-curriculum", "inspect-installed-skill-as-project"],
+            },
+        }
     use_chain = question_mode == "native-multi" or (question_mode == "auto" and host == "opencode")
     if use_chain:
         mode = "native-multi-question-when-safe"

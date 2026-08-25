@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.9.0"
+  version: "1.10.0"
   package: upstack
 ---
 
@@ -20,7 +20,7 @@ The first intent question should distinguish outcomes such as **learning how an 
 
 After intent is known, distinguish a **selected project** from a broad workspace. A home directory, monorepo parent, downloads folder, or editor workspace containing several folders is not itself a project. Never summarize the agent’s home directory as the learner’s repository and never silently choose a child folder.
 
-Before executing **any** Upstack command, run `scripts/project_state.py <path> --command <subcommand>` as the shared project-resolution gate. If it returns `known_project`, load the reported project identity and state and resume the requested command; do not restart onboarding or create a second curriculum. If it returns `onboarding_required`, route the user through onboarding before project work. If it returns `project_selection_required`, ask for an explicit project path; never choose a child of a broad workspace implicitly. The only exceptions are a context-independent intent question and read-only capability detection.
+Before executing **any** Upstack command, resolve `<path>` from the host-provided opened workspace or current project directory, normally `.`—never from the directory that contains this installed `SKILL.md`. Then run `scripts/project_state.py <path> --command <subcommand>` as the shared project-resolution gate. If the path is inside `.agents/skills/<skill>`, `.opencode/skills/<skill>`, `.claude/skills/<skill>`, `.cline/skills/<skill>`, `.clinerules/skills/<skill>`, `.github/skills/<skill>`, or `.agent/skills/<skill>`, treat it as skill resources and step out to the containing workspace. If the gate returns `known_project`, load the reported pointers, project identity, curriculum, current lesson, design/Stitch status, history, and state, then resume the requested command; do not restart onboarding or create a second curriculum. If it returns `onboarding_required`, route the user through onboarding before project work. If it returns `project_selection_required`, ask for an explicit project path; never choose a child of a broad workspace implicitly. The only exceptions are a context-independent intent question and read-only capability detection.
 
 Use `scripts/onboarding.py <path> --json` to produce the next question plan. **The planner is not the question UI.** Immediately inspect the current callable tool set or verified host capability, then invoke the matching native question tool with only the returned `questions` payload.
  For OpenCode, call its `question` tool; for another host, call its verified native equivalent. Do not stop after printing the JSON, do not ask the model to simulate the tool, and do not print a prose preamble or duplicate numbered list when a native tool is callable. If no callable native question tool exists, render the single returned question as a short numbered or lettered list and do not call it clickable.
@@ -43,7 +43,7 @@ For public discovery, say:
 
 > I’ll search repository metadata first, then enrich the best candidates with README and targeted configuration signals. I’ll show you the shortlist before any clone, fork, installation, or execution.
 
-If the selected stateful workflow has no `.upstack/` state, do not stop with a generic initialization menu. Announce the next user-facing action, complete the relevant onboarding questions, show the draft inventory and first blueprint summary, and ask once before creating `.upstack/`. Preserve the original request and continue it after that confirmation. When `.upstack/STATE.json` exists, treat the project as known: show the persisted project name, project ID, onboarding status, mode, current stage, completed evidence, pending confirmation, and next action, then resume the requested command. Stateless previews and read-only discovery can continue without persistent state.
+If the selected stateful workflow has no `.upstack/` state, do not stop with a generic initialization menu. Announce the next user-facing action, complete the relevant onboarding questions, show the draft inventory and first blueprint summary, and ask once before creating `.upstack/`. Preserve the original request and continue it after that confirmation. When `.upstack/STATE.json` exists, treat the project as known: show or use the persisted project name, project ID, canonical project/workspace/destination pointers, source pointer, onboarding status, mode, curriculum, current lesson, completed evidence, design/Stitch route, history, pending confirmation, and next action, then resume the requested command. Do not call fresh onboarding for a known project. Stateless previews and read-only discovery can continue without persistent state.
 
 Use `.upstack/` for Upstack state. Do not create, modify, or delete it without the learner’s confirmation. A destination selection or resolved-path confirmation is not permission to scaffold, clone, install, execute, create a branch/worktree, or publish; request those side-effect confirmations separately.
 
@@ -85,9 +85,9 @@ Examples:
 
 ## Project state and every-command resume
 
-Read `references/project-state.md` before implementing or routing any project command. Treat `scripts/project_state.py <path> --command <subcommand>` as the mandatory shared gate for `/upstack`, `/upstack init`, `/upstack inventory`, `/upstack concepts`, `/upstack focus`, `/upstack blueprint`, `/upstack reverse`, `/upstack build`, `/upstack stage`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack discover`, `/upstack choose`, `/upstack source`, `/upstack role`, `/upstack portfolio`, `/upstack status`, and project-specific aliases. A `known_project` result means load `.upstack/PROJECT.json` and `.upstack/STATE.json` and resume. An `onboarding_required` result means preserve the requested command while completing onboarding. A `project_selection_required` result means ask for the explicit project path. Do not restart the intent question or select a child directory implicitly when persisted state exists.
+Read `references/project-state.md` before implementing or routing any project command. Treat `scripts/project_state.py <path> --command <subcommand>` as the mandatory shared gate for `/upstack`, `/upstack init`, `/upstack inventory`, `/upstack concepts`, `/upstack focus`, `/upstack blueprint`, `/upstack reverse`, `/upstack build`, `/upstack stage`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack discover`, `/upstack choose`, `/upstack source`, `/upstack role`, `/upstack portfolio`, `/upstack status`, and project-specific aliases. A `known_project` result means load `.upstack/PROJECT.json` and `.upstack/STATE.json`, including canonical `pointers`, `curriculum`, `current_lesson`, `design`, `history`, `active_directive`, and `next_action`, and resume without any fresh onboarding question. An `onboarding_required` result means preserve the requested command while completing onboarding. A `project_selection_required` result means ask for the explicit project path. Do not restart the intent question or select a child directory implicitly when persisted state exists.
 
-Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explicit lesson lookup, status, resumption, and evidence recording. Initialization writes the curriculum roadmap but does not write `CURRENT_LESSON.md`; that file is generated only when the learner requests a lesson identifier. Persist project identity, onboarding answers, current mode, current lesson, completed evidence, pending confirmations, and next action. Keep the state local to the learner-confirmed project root.
+Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explicit lesson lookup, status, resumption, and evidence recording. Initialization writes the curriculum roadmap but does not write `CURRENT_LESSON.md`; that file is generated only when the learner requests a lesson identifier. Persist project identity, canonical project/workspace/destination/source pointers, curriculum artifact paths, current lesson ID/path/status, design and Stitch continuation, bounded history, onboarding answers, current mode, completed evidence, pending confirmations, and next action. Keep the state local to the learner-confirmed project root.
 
 ## Commands
 
@@ -146,6 +146,7 @@ Create `.upstack/` lazily with:
 ├── SESSION_HANDOFF.md
 ├── PRODUCT_BRIEF.md
 ├── PACKAGE_MANAGER.md
+├── HISTORY.jsonl
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md
 ├── CONCEPT_MAP.md

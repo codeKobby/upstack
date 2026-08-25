@@ -19,7 +19,7 @@ from package_manager import plan as package_manager_plan
 from project_state import project_id, state_paths
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 STATE_FILENAME = "STATE.json"
 PLAN_FILENAME = "plan.json"
 
@@ -37,7 +37,120 @@ def _now() -> str:
 def _state_paths(destination: Path) -> dict[str, Path]:
     paths = state_paths(destination)
     paths["plan"] = paths["root"] / "lessons" / PLAN_FILENAME
+    paths["curriculum"] = paths["root"] / "lessons" / "CURRICULUM.md"
+    paths["blueprint"] = paths["root"] / "lessons" / "LESSON_BLUEPRINT.md"
+    paths["progress"] = paths["root"] / "lessons" / "progress.json"
+    paths["history"] = paths["root"] / "HISTORY.jsonl"
     return paths
+
+
+def _canonical_pointer(value: Any, base: Path) -> str | None:
+    if value in (None, ""):
+        return None
+    raw = Path(str(value)).expanduser()
+    return str((base / raw if not raw.is_absolute() else raw).resolve())
+
+
+def _build_pointers(target: Path, paths: dict[str, Path], answers: dict[str, Any], plan: dict[str, Any], *, workspace: str | Path | None = None) -> dict[str, Any]:
+    workspace_root = _canonical_pointer(workspace, target.parent) or _canonical_pointer(answers.get("workspace_root"), target.parent) or str(target.parent)
+    source_path = _canonical_pointer(answers.get("source_path"), Path(workspace_root))
+    source = {
+        "kind": answers.get("source") or ("scratch" if answers.get("project_mode") == "scratch" else "unknown"),
+        "path": source_path,
+        "url": answers.get("source_url") or answers.get("repository_url") or answers.get("repo_url"),
+        "detail": answers.get("source_detail"),
+        "candidate_id": answers.get("candidate_id"),
+    }
+    source = {key: value for key, value in source.items() if value not in (None, "", [])}
+    design_mode = answers.get("ui_design") or answers.get("design_mode") or "not_selected"
+    stitch_status = answers.get("stitch_status") or ("selected-awaiting-confirmation" if design_mode == "stitch-mcp" else "not_selected")
+    curriculum = {
+        "id": plan.get("curriculum", {}).get("id"),
+        "title": plan.get("curriculum", {}).get("title"),
+        "plan": str(paths["plan"]),
+        "markdown": str(paths["curriculum"]),
+        "blueprint": str(paths["blueprint"]),
+        "progress": str(paths["progress"]),
+    }
+    design = {
+        "mode": design_mode,
+        "status": answers.get("design_status") or ("portable" if design_mode == "portable" else "not_started"),
+        "stitch": {"selected": design_mode == "stitch-mcp", "status": stitch_status, "remote_project": answers.get("stitch_project_id")},
+        "artifacts": {
+            "brief": str(paths["root"] / "design" / "BRIEF.md"),
+            "wireframe": str(paths["root"] / "design" / "WIREFRAME.md"),
+            "contract": str(paths["root"] / "design" / "DESIGN.md"),
+            "plan": str(paths["root"] / "design" / "design-plan.json"),
+        },
+    }
+    stage = plan["stages"][0]
+    current_lesson = {"sequence": 1, "id": stage["id"], "title": stage["title"], "status": "not_generated", "path": None, "requested": False}
+    return {
+        "project_root": str(target),
+        "workspace_root": workspace_root,
+        "destination": str(target),
+        "state_file": str(paths["state"]),
+        "project_file": str(paths["project"]),
+        "source": source,
+        "curriculum": curriculum,
+        "current_lesson": current_lesson,
+        "design": design,
+        "history_file": str(paths["history"]),
+    }
+
+
+def _record_history(state: dict[str, Any], paths: dict[str, Path], event: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
+    entry = {"at": _now(), "event": event, "current_stage": state.get("current_stage"), "next_action": state.get("next_action")}
+    if details:
+        entry["details"] = details
+    state.setdefault("history", []).append(entry)
+    paths["history"].parent.mkdir(parents=True, exist_ok=True)
+    with paths["history"].open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry) + "\n")
+    return entry
+
+
+def _design_pointer(target: Path, design: dict[str, Any]) -> dict[str, Any]:
+    plan_path = target / ".upstack" / "design" / "design-plan.json"
+    try:
+        if plan_path.is_file():
+            saved = json.loads(plan_path.read_text(encoding="utf-8"))
+            integration = saved.get("integration", {}) if isinstance(saved, dict) else {}
+            design = {**design, "mode": saved.get("mode") or design.get("mode"), "status": integration.get("status") or design.get("status"), "screens": len(saved.get("screens", [])) if isinstance(saved, dict) and isinstance(saved.get("screens"), list) else design.get("screens", 0), "stitch": {**(design.get("stitch") or {}), "selected": saved.get("mode") == "stitch-mcp", "status": integration.get("status") or (design.get("stitch") or {}).get("status"), "remote_project": (design.get("stitch") or {}).get("remote_project")}}
+    except (OSError, json.JSONDecodeError):
+        pass
+    return design
+
+
+def _ensure_resume_fields(state: dict[str, Any], target: Path, paths: dict[str, Path], plan: dict[str, Any]) -> dict[str, Any]:
+    """Upgrade legacy state in memory without writing unless the caller writes."""
+    pointers = state.get("pointers") if isinstance(state.get("pointers"), dict) else {}
+    pointers.setdefault("project_root", str(target))
+    pointers.setdefault("workspace_root", str(target.parent))
+    pointers.setdefault("destination", str(target))
+    pointers.setdefault("state_file", str(paths["state"]))
+    pointers.setdefault("project_file", str(paths["project"]))
+    pointers.setdefault("history_file", str(paths["history"]))
+    pointers.setdefault("source", {})
+    pointers.setdefault("curriculum", {"id": plan.get("curriculum", {}).get("id"), "title": plan.get("curriculum", {}).get("title"), "plan": str(paths["plan"]), "markdown": str(paths["curriculum"]), "blueprint": str(paths["blueprint"]), "progress": str(paths["progress"])})
+    stage = int(state.get("current_stage") or 1)
+    stage = max(1, min(stage, len(plan.get("stages", [])) or 1))
+    lesson = plan.get("stages", [])[stage - 1] if plan.get("stages") else {"id": f"stage-{stage:02d}", "title": f"Lesson {stage}"}
+    current_lesson = state.get("current_lesson") if isinstance(state.get("current_lesson"), dict) else {}
+    lesson_path = paths["root"] / "lessons" / "CURRENT_LESSON.md"
+    lesson_requested = bool(current_lesson.get("requested")) or lesson_path.is_file()
+    current_lesson = {"sequence": stage, "id": current_lesson.get("id") or lesson.get("id"), "title": current_lesson.get("title") or lesson.get("title"), "status": current_lesson.get("status") or ("active" if lesson_requested else "not_generated"), "path": current_lesson.get("path") or (str(lesson_path) if lesson_requested else None), "requested": lesson_requested}
+    pointers["current_lesson"] = current_lesson
+    design = _design_pointer(target, state.get("design") if isinstance(state.get("design"), dict) else {"mode": "not_selected", "status": "not_started", "stitch": {"selected": False, "status": "not_selected"}})
+    pointers["design"] = design
+    state["pointers"] = pointers
+    state["curriculum"] = state.get("curriculum") if isinstance(state.get("curriculum"), dict) else pointers["curriculum"]
+    state["current_lesson"] = current_lesson
+    state["design"] = design
+    state.setdefault("history", [])
+    state.setdefault("attempts", [])
+    state["schema_version"] = max(int(state.get("schema_version") or 1), SCHEMA_VERSION)
+    return state
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -97,14 +210,23 @@ def _render_package_manager(report: dict[str, Any]) -> str:
 
 
 def _render_state_summary(state: dict[str, Any]) -> str:
+    pointers = state.get("pointers", {})
+    lesson = state.get("current_lesson", {})
+    design = state.get("design", {})
     return "\n".join([
         "# Apprenticeship State",
         "",
-        f"- Project: `{state['project'].get('name') or 'unnamed'}`",
-        f"- Mode: `{state['mode']}`",
-        f"- Current lesson: `{state['current_stage']}`",
-        f"- Completed lessons: `{len(state['completed_stages'])}`",
-        f"- Last action: `{state['last_action']}`",
+        f"- Project: `{state.get('project', {}).get('name') or 'unnamed'}`",
+        f"- Project root: `{pointers.get('project_root') or state.get('project', {}).get('destination') or 'unknown'}`",
+        f"- Source pointer: `{(pointers.get('source') or {}).get('path') or (pointers.get('source') or {}).get('url') or 'none'}`",
+        f"- Mode: `{state.get('mode')}`",
+        f"- Curriculum: `{(state.get('curriculum') or {}).get('id') or 'unknown'}`",
+        f"- Current lesson: `{lesson.get('id') or state.get('current_stage')}`",
+        f"- Completed lessons: `{len(state.get('completed_stages', []))}`",
+        f"- Design route: `{design.get('mode') or 'not selected'}` ({design.get('status') or 'unknown'})",
+        f"- Last action: `{state.get('last_action')}`",
+        f"- Next action: `{state.get('next_action')}`",
+        f"- History entries: `{len(state.get('history', []))}`",
         "",
         "Use the tutor command to resume the current lesson. Do not restart onboarding when this state exists.",
         "",
@@ -144,6 +266,7 @@ def initialize_project(
     selected_manager = answers.get("package_manager") if answers.get("package_manager") in {"pnpm", "npm", "bun", "yarn"} else None
     package_report = package_manager_plan(target, selected=selected_manager, new_project=answers.get("project_mode") == "scratch")
     plan = build_plan(brief, profile, mode=mode)
+    pointers = _build_pointers(target, paths, answers, plan, workspace=workspace)
     lesson_dir = paths["root"] / "lessons"
     written = write_artifacts(plan, lesson_dir, 1, include_current=False)
     project_name = brief.get("name") or brief.get("title") or target.name
@@ -167,6 +290,11 @@ def initialize_project(
         "package_manager": package_report.get("selected") or answers.get("package_manager"),
         "package_manager_plan": package_report,
         "onboarding": {"status": "initialized", "answers_persisted": True, "answers": onboarding_answers or {}},
+        "pointers": pointers,
+        "curriculum": pointers["curriculum"],
+        "current_lesson": pointers["current_lesson"],
+        "design": pointers["design"],
+        "history": [],
         "current_stage": 1,
         "completed_stages": [],
         "attempts": [],
@@ -176,7 +304,9 @@ def initialize_project(
         "pending_confirmation": None,
         "progression_gate": plan["progression_gate"],
     }
+    _record_history(state, paths, "project_initialized", {"mode": mode, "project_root": str(target)})
     _write_json(paths["plan"], plan)
+    project_record["pointers"] = pointers
     _write_json(paths["project"], project_record)
     _write_json(paths["state"], state)
     (paths["root"] / "PRODUCT_BRIEF.md").write_text(_render_product_brief(brief), encoding="utf-8")
@@ -193,7 +323,7 @@ def load_project(destination: str | Path) -> tuple[dict[str, Any], dict[str, Any
         raise FileNotFoundError(f"No persisted Upstack apprenticeship found at {paths['root']}")
     state = json.loads(paths["state"].read_text(encoding="utf-8"))
     plan = json.loads(paths["plan"].read_text(encoding="utf-8"))
-    return state, plan, paths
+    return _ensure_resume_fields(state, target, paths, plan), plan, paths
 
 
 def resume_project(destination: str | Path, identifier: Any = None, *, write: bool = False) -> dict[str, Any]:
@@ -206,13 +336,18 @@ def resume_project(destination: str | Path, identifier: Any = None, *, write: bo
     if selected > current_stage and selected not in state.get("completed_stages", []):
         return {"status": "locked", "identifier": lookup.get("identifier"), "curriculum": plan.get("curriculum"), "stage": selected, "title": lookup["lesson"].get("title"), "current_stage": current_stage, "unlock_after": current_stage, "message": "This lesson is on the curriculum but is locked until the current stage evidence gate is complete.", "resume": True, "write_performed": False}
     lesson = current_lesson(plan, selected)
-    result = {"status": "resumed", "identifier": lookup.get("identifier"), "curriculum": plan.get("curriculum"), "state": state, "lesson": lesson, "state_file": str(paths["state"]), "resume": True, "write_performed": False}
+    pointers = state.get("pointers", {}) if isinstance(state.get("pointers"), dict) else {}
+    result = {"status": "resumed", "identifier": lookup.get("identifier"), "curriculum": plan.get("curriculum"), "state": state, "lesson": lesson, "pointers": pointers, "resume_context": {"project_root": pointers.get("project_root") or str(Path(destination).expanduser().resolve()), "source": pointers.get("source"), "curriculum": state.get("curriculum") or pointers.get("curriculum"), "current_lesson": state.get("current_lesson") or pointers.get("current_lesson"), "design": state.get("design") or pointers.get("design"), "next_action": state.get("next_action")}, "state_file": str(paths["state"]), "resume": True, "write_performed": False}
     if write:
         lesson_path = paths["root"] / "lessons" / "CURRENT_LESSON.md"
         lesson_path.parent.mkdir(parents=True, exist_ok=True)
         lesson_path.write_text(render_lesson(lesson, plan), encoding="utf-8")
+        state["current_lesson"] = {"sequence": selected, "id": lesson["id"], "title": lesson["title"], "status": "active", "path": str(lesson_path), "requested": True, "requested_identifier": lookup.get("identifier"), "requested_at": _now()}
+        if isinstance(state.get("pointers"), dict):
+            state["pointers"]["current_lesson"] = state["current_lesson"]
         state["last_action"] = "lesson_requested"
         state["next_action"] = "record_current_lesson_evidence"
+        _record_history(state, paths, "lesson_requested", {"identifier": lookup.get("identifier"), "lesson_id": lesson["id"], "path": str(lesson_path)})
         state["updated_at"] = _now()
         _write_json(paths["state"], state)
         (paths["root"] / "STATE.md").write_text(_render_state_summary(state), encoding="utf-8")
@@ -232,7 +367,7 @@ def record_evidence(destination: str | Path, stage: int, evidence: dict[str, Any
     if not write:
         return result
     attempt_record = {"stage": stage, "recorded_at": _now(), "evidence": evidence, "complete": complete}
-    state["attempts"].append(attempt_record)
+    state.setdefault("attempts", []).append(attempt_record)
     if complete:
         state["completed_stages"].append(stage)
         state["completed_stages"] = sorted(set(state["completed_stages"]))
@@ -242,10 +377,17 @@ def record_evidence(destination: str | Path, stage: int, evidence: dict[str, Any
         state["next_action"] = "resume_current_lesson" if next_stage <= len(plan["stages"]) else "portfolio_or_review"
         result["unlocked"] = next_stage <= len(plan["stages"])
         if next_stage <= len(plan["stages"]):
-            write_artifacts(plan, paths["root"] / "lessons", next_stage, completed_stages=state["completed_stages"])
+            write_artifacts(plan, paths["root"] / "lessons", next_stage, include_current=False, completed_stages=state["completed_stages"])
+            next_item = plan["stages"][next_stage - 1]
+            state["current_lesson"] = {"sequence": next_stage, "id": next_item["id"], "title": next_item["title"], "status": "not_generated", "path": None, "requested": False}
+            if isinstance(state.get("pointers"), dict):
+                state["pointers"]["current_lesson"] = state["current_lesson"]
+        else:
+            state["current_lesson"] = {"sequence": stage, "id": plan["stages"][stage - 1]["id"], "title": plan["stages"][stage - 1]["title"], "status": "completed", "path": (state.get("current_lesson") or {}).get("path"), "requested": True}
     else:
         state["last_action"] = "evidence_recorded_stage_remains_active"
         state["next_action"] = "resume_current_lesson"
+    _record_history(state, paths, "evidence_recorded", {"stage": stage, "complete": complete, "evidence_present": present})
     state["updated_at"] = _now()
     _write_json(paths["state"], state)
     (paths["root"] / "STATE.md").write_text(_render_state_summary(state), encoding="utf-8")

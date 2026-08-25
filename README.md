@@ -108,9 +108,9 @@ Every Upstack command uses the same project-resolution gate before command-speci
 python3 scripts/project_state.py . --command <subcommand>
 ```
 
-If the result is `known_project`, Upstack loads `.upstack/PROJECT.json` and `.upstack/STATE.json`, shows or uses the persisted project identity, onboarding status, mode, current lesson/stage, completed evidence, pending confirmation, and next action, then resumes. If the result is `onboarding_required`, Upstack preserves the requested command and routes through onboarding instead of starting a second curriculum. If the result is `project_selection_required`, it asks for an explicit project path and never chooses a child of a broad workspace implicitly. This gate applies to `/upstack`, `/upstack build`, `/upstack curriculum`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, `/upstack portfolio`, `/upstack project`, `/upstack status`, `/upstack update`, and the other project commands.
+If the result is `known_project`, Upstack loads `.upstack/PROJECT.json` and `.upstack/STATE.json`, shows or uses the persisted project identity, canonical project/workspace/destination/source pointers, onboarding status, mode, curriculum, current lesson, completed evidence, design/Stitch route, history, pending confirmation, and next action, then resumes without onboarding. If the input path is inside a project-local installed skill directory such as `.agents/skills/upstack`, the gate steps out to the containing workspace first. If the result is `onboarding_required`, Upstack preserves the requested command and routes through onboarding instead of starting a second curriculum. If the result is `project_selection_required`, it asks for an explicit project path and never chooses a child of a broad workspace implicitly. This gate applies to `/upstack`, `/upstack build`, `/upstack curriculum`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, `/upstack portfolio`, `/upstack project`, `/upstack status`, `/upstack update`, and the other project commands.
 
-A confirmed project stores its local identity and continuity record under `.upstack/PROJECT.json` and `.upstack/STATE.json`. The tutor can initialize, resume, show status, record evidence, and unlock the next stage only when the evidence gate is complete:
+A confirmed project stores its local identity and continuity record under `.upstack/PROJECT.json` and `.upstack/STATE.json`. `STATE.json` includes pointers to the project root, workspace, destination, source repository or local source, curriculum artifacts, current lesson, design/Stitch artifacts, and history. `.upstack/HISTORY.jsonl` records initialization, lesson requests, evidence, and approved live-session corrections. The tutor can initialize, resume, show status, record evidence, and unlock the next stage only when the evidence gate is complete:
 
 ```bash
 python3 scripts/tutor.py init --destination /path/to/project --brief-file /path/to/brief.json --confirm
@@ -122,7 +122,7 @@ python3 scripts/tutor.py record --destination /path/to/project --stage 1 --evide
 
 ## The ingredients and recipe
 
-A local initialization creates a learner-owned `.upstack/` directory:
+A local initialization creates a learner-owned `.upstack/` directory. The directory belongs to the selected destination project, not to the installed Upstack skill package:
 
 ```text
 .upstack/
@@ -134,6 +134,7 @@ A local initialization creates a learner-owned `.upstack/` directory:
 ├── SESSION_HANDOFF.md
 ├── PRODUCT_BRIEF.md
 ├── PACKAGE_MANAGER.md
+├── HISTORY.jsonl
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md
 ├── CONCEPT_MAP.md

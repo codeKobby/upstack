@@ -391,7 +391,11 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.9.0")
+        self.assertEqual(matrix["version"], "1.10.0")
+        self.assertIn("project_root", matrix["project_tracking"]["state_pointers"])
+        self.assertIn("current_lesson", matrix["project_tracking"]["state_pointers"])
+        self.assertEqual(matrix["project_tracking"]["history"], ".upstack/HISTORY.jsonl")
+
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
         self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
@@ -581,6 +585,44 @@ class OnboardingTests(unittest.TestCase):
                 self.assertEqual(gated["status"], "known_project", command)
                 self.assertTrue(gated["resume_required"], command)
 
+    def test_project_state_recovers_from_project_local_installed_skill_path(self):
+        module = load_module("upstack_project_state_skill_path", PROJECT_STATE)
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "ai-workflow"
+            skill = project / ".agents" / "skills" / "upstack"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("---\nname: upstack\n---\n", encoding="utf-8")
+            state_dir = project / ".upstack"
+            state_dir.mkdir()
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            (state_dir / "PROJECT.json").write_text(json.dumps({"project_id": "workflow-id", "root": str(project), "name": "ai-workflow"}), encoding="utf-8")
+            (state_dir / "STATE.json").write_text(json.dumps({"project_id": "workflow-id", "mode": "guided-lesson", "current_stage": 3, "completed_stages": [1, 2], "next_action": "record_current_lesson_evidence", "pointers": {"project_root": str(project)}}), encoding="utf-8")
+            gate = module.command_gate(skill, "lesson")
+            self.assertEqual(gate["status"], "known_project")
+            self.assertEqual(Path(gate["project_root"]), project.resolve())
+            self.assertEqual(gate["skill_resource_path"], str(skill.resolve()))
+            self.assertEqual(gate["resume_context"]["project_root"], str(project.resolve()))
+            self.assertEqual(gate["resume_context"]["next_action"], "record_current_lesson_evidence")
+            onboarding = load_module("upstack_onboarding_skill_path_resume", ROOT / "scripts" / "onboarding.py")
+            context = onboarding.context(skill)
+            self.assertTrue(context["known_upstack_project"])
+            self.assertEqual(context["project_root"], str(project.resolve()))
+            resume_plan = onboarding.question_plan(context, {}, host="opencode")
+            self.assertEqual(resume_plan["mode"], "resume-known-project")
+            self.assertEqual(resume_plan["questions"], [])
+
+    def test_global_installed_skill_path_is_not_a_project(self):
+        module = load_module("upstack_project_state_global_skill", PROJECT_STATE)
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            skill = home / ".agents" / "skills" / "upstack"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("---\nname: upstack\n---\n", encoding="utf-8")
+            with patch.object(module.Path, "home", return_value=home):
+                root, detection = module.resolve_project_root(skill)
+            self.assertIsNone(root)
+            self.assertEqual(detection, "installed_skill_path")
+
     def test_onboarding_context_reports_known_project_state(self):
         module = load_module("upstack_onboarding_state_context", ROOT / "scripts" / "onboarding.py")
         with tempfile.TemporaryDirectory() as directory:
@@ -595,6 +637,24 @@ class OnboardingTests(unittest.TestCase):
             self.assertEqual(context["persisted_state"]["current_stage"], 3)
             self.assertEqual(context["persisted_state"]["next_action"], "resume_current_lesson")
 
+    def test_known_project_onboarding_returns_resume_plan_without_questions(self):
+        module = load_module("upstack_onboarding_resume_plan", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            state_dir = project / ".upstack"
+            state_dir.mkdir()
+            state = {"project_id": "resume-test-id", "mode": "guided-lesson", "current_stage": 2, "completed_stages": [1], "next_action": "record_current_lesson_evidence", "current_lesson": {"id": "stage-02-foundation", "status": "active"}, "pointers": {"project_root": str(project), "curriculum": {"id": "upstack-fresh-start-core"}, "current_lesson": {"id": "stage-02-foundation", "status": "active"}, "design": {"mode": "stitch-mcp", "status": "available_after_confirmation"}, "history_file": str(state_dir / "HISTORY.jsonl")}, "history": [{"event": "lesson_requested"}]}
+            (state_dir / "STATE.json").write_text(json.dumps(state), encoding="utf-8")
+            context = module.context(project)
+            self.assertTrue(context["known_upstack_project"])
+            self.assertIsNone(module.next_question(context, {}))
+            plan = module.question_plan(context, {}, host="opencode")
+            self.assertEqual(plan["mode"], "resume-known-project")
+            self.assertEqual(plan["questions"], [])
+            self.assertEqual(plan["resume_context"]["current_lesson"]["id"], "stage-02-foundation")
+            self.assertEqual(plan["resume_context"]["design"]["mode"], "stitch-mcp")
+
     def test_live_session_handoff_requires_confirmation_and_preserves_project_progress(self):
         module = load_module("upstack_session_handoff", SESSION_HANDOFF)
         state_module = load_module("upstack_session_handoff_state", PROJECT_STATE)
@@ -604,7 +664,7 @@ class OnboardingTests(unittest.TestCase):
             workspace.mkdir()
             destination = workspace / "agent-flow"
             brief = {"name": "Agent Flow", "problem": "Learn orchestration by building slices."}
-            tutor.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, onboarding_answers={"goal": "skill-upgrade", "project_mode": "scratch"}, confirm=True)
+            tutor.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, onboarding_answers={"goal": "skill-upgrade", "project_mode": "scratch", "ui_design": "stitch-mcp", "stitch_status": "available_after_confirmation", "stitch_project_id": "stitch-project-1"}, confirm=True)
             request = {"reason": "Learner clarified that the project must be lesson-led and curriculum-first.", "changes": {"project_mode": "scratch", "teaching_mode": "guided-lesson", "lesson_generation": "explicit-identifier-only"}, "resume_command": "resume_current_curriculum"}
             prepared = module.prepare_handoff(destination, request)
             self.assertEqual(prepared["status"], "confirmation_required")
@@ -622,6 +682,8 @@ class OnboardingTests(unittest.TestCase):
             gate = state_module.command_gate(destination, "lesson")
             self.assertEqual(gate["status"], "known_project")
             self.assertEqual(gate["active_directive"]["request_id"], applied["request"]["request_id"])
+            self.assertEqual(gate["state"]["history_count"], 2)
+            self.assertEqual(gate["resume_context"]["project_root"], str(destination.resolve()))
 
     def test_live_session_handoff_without_state_stays_session_only(self):
         module = load_module("upstack_session_handoff_draft", SESSION_HANDOFF)
@@ -663,7 +725,12 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue((destination / ".upstack" / "STATE.json").exists())
             self.assertTrue((destination / ".upstack" / "lessons" / "CURRICULUM.md").exists())
             self.assertTrue((destination / ".upstack" / "PACKAGE_MANAGER.md").exists())
+            self.assertTrue((destination / ".upstack" / "HISTORY.jsonl").exists())
             self.assertEqual(created["state"]["package_manager"], "pnpm")
+            self.assertEqual(created["state"]["pointers"]["project_root"], str(destination.resolve()))
+            self.assertEqual(created["state"]["pointers"]["destination"], str(destination.resolve()))
+            self.assertEqual(created["state"]["pointers"]["curriculum"]["id"], "upstack-fresh-start-core")
+            self.assertEqual(created["state"]["current_lesson"]["status"], "not_generated")
             self.assertFalse((destination / ".upstack" / "lessons" / "CURRENT_LESSON.md").exists())
             self.assertEqual(created["state"]["current_stage"], 1)
             resumed = module.resume_project(destination)
@@ -675,6 +742,10 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue(requested["write_performed"])
             self.assertTrue((destination / ".upstack" / "lessons" / "CURRENT_LESSON.md").exists())
             self.assertEqual(requested["state"]["next_action"], "record_current_lesson_evidence")
+            self.assertEqual(requested["state"]["current_lesson"]["id"], "stage-01-orient")
+            self.assertEqual(requested["state"]["current_lesson"]["status"], "active")
+            self.assertGreaterEqual(len(requested["state"]["history"]), 2)
+            self.assertGreaterEqual(len((destination / ".upstack" / "HISTORY.jsonl").read_text(encoding="utf-8").splitlines()), 2)
             partial = module.record_evidence(destination, 1, {"attempt": "code", "verification": "passed"}, write=True)
             self.assertEqual(partial["status"], "evidence_incomplete")
             self.assertFalse(partial["unlocked"])

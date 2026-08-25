@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _now() -> str:
@@ -24,6 +24,7 @@ def _paths(destination: str | Path) -> dict[str, Path]:
         "state_md": root / "STATE.md",
         "handoff": root / "SESSION_HANDOFF.json",
         "handoff_md": root / "SESSION_HANDOFF.md",
+        "history": root / "HISTORY.jsonl",
     }
 
 
@@ -119,6 +120,21 @@ def apply_handoff(destination: str | Path, request: dict[str, Any], *, confirm: 
     normalized = prepared["request"]
     applied_at = _now()
     record = {"schema_version": SCHEMA_VERSION, "applied_at": applied_at, "request": normalized, "continuation": prepared["continuation"]}
+    pointers = state.get("pointers") if isinstance(state.get("pointers"), dict) else {}
+    target = Path(destination).expanduser().resolve()
+    pointers.setdefault("project_root", str(target))
+    pointers.setdefault("workspace_root", str(target.parent))
+    pointers.setdefault("destination", str(target))
+    pointers.setdefault("state_file", str(paths["state"]))
+    pointers.setdefault("project_file", str(paths["root"] / "PROJECT.json"))
+    pointers.setdefault("history_file", str(paths["history"]))
+    state["pointers"] = pointers
+    state.setdefault("history", [])
+    history_entry = {"at": applied_at, "event": "live_change_applied", "current_stage": state.get("current_stage"), "next_action": normalized["resume_command"], "details": {"request_id": normalized["request_id"], "changes": normalized["changes"]}}
+    state["history"].append(history_entry)
+    paths["history"].parent.mkdir(parents=True, exist_ok=True)
+    with paths["history"].open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(history_entry) + "\n")
     state["active_directive"] = normalized
     state["last_action"] = "live_change_applied"
     state["next_action"] = normalized["resume_command"]
