@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -26,7 +26,14 @@
     "known_project": "load-and-resume; do-not-restart-onboarding",
     "unknown_project": "route-through-onboarding-before-project-command",
     "broad_workspace": "ask-for-explicit-project-path; never-select-child-implicitly",
-    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status"]
+    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status"]
+  },
+  "curriculum_policy": {
+    "roadmap": "persist-before-lesson-generation",
+    "lesson_generation": "explicit-identifier-only",
+    "identifiers": ["curriculum-id", "day-number", "day-name", "stage-id", "title", "alias"],
+    "locked_behavior": "report-lock-and-unlock-condition; do-not-teach-early",
+    "commands": ["curriculum", "lesson IDENTIFIER"]
   },
   "fresh_start_policy": {
     "default_mode": "guided-lesson",

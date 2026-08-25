@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.6.0"
+  version: "1.7.0"
   package: upstack
 ---
 
@@ -47,11 +47,27 @@ If the selected stateful workflow has no `.upstack/` state, do not stop with a g
 
 Use `.upstack/` for Upstack state. Do not create, modify, or delete it without the learner’s confirmation. A destination selection or resolved-path confirmation is not permission to scaffold, clone, install, execute, create a branch/worktree, or publish; request those side-effect confirmations separately.
 
+## Curriculum-first lesson requests
+
+Persist the curriculum roadmap before generating lesson content. Use `/upstack curriculum` to show stable curriculum and lesson identifiers without generating lessons. Generate one lesson only after the learner explicitly requests `/upstack lesson <identifier>` or an equivalent host command. Resolve `<identifier>` against the active project’s persisted curriculum; accept the curriculum ID, day number, `day one`-style name, stage ID, title, or alias. If the identifier is ambiguous, show the candidates. If it is locked, show the current stage and unlock condition; do not teach it early. If no identifier is supplied, use the active current stage only as an explicit resume request, not as permission to generate the full curriculum.
+
+The planner writes `CURRICULUM.md` and `plan.json` as the roadmap. It must not create `CURRENT_LESSON.md` during initialization. `CURRENT_LESSON.md` is created or refreshed only after the learner requests a lesson. Preserve future stages as summaries with lock status rather than pre-generating their lesson content.
+
+Examples:
+
+```text
+/upstack curriculum
+/upstack lesson 1
+/upstack lesson day-two
+/upstack lesson stage-03-vertical-slice
+/upstack lesson Build the runnable foundation
+```
+
 ## Project state and every-command resume
 
 Read `references/project-state.md` before implementing or routing any project command. Treat `scripts/project_state.py <path> --command <subcommand>` as the mandatory shared gate for `/upstack`, `/upstack init`, `/upstack inventory`, `/upstack concepts`, `/upstack focus`, `/upstack blueprint`, `/upstack reverse`, `/upstack build`, `/upstack stage`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack discover`, `/upstack choose`, `/upstack source`, `/upstack role`, `/upstack portfolio`, `/upstack status`, and project-specific aliases. A `known_project` result means load `.upstack/PROJECT.json` and `.upstack/STATE.json` and resume. An `onboarding_required` result means preserve the requested command while completing onboarding. A `project_selection_required` result means ask for the explicit project path. Do not restart the intent question or select a child directory implicitly when persisted state exists.
 
-Use `scripts/tutor.py` for confirmed initialization, status, current-lesson resumption, and evidence recording. Persist project identity, onboarding answers, current mode, current lesson, completed evidence, pending confirmations, and next action. Keep the state local to the learner-confirmed project root.
+Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explicit lesson lookup, status, resumption, and evidence recording. Initialization writes the curriculum roadmap but does not write `CURRENT_LESSON.md`; that file is generated only when the learner requests a lesson identifier. Persist project identity, onboarding answers, current mode, current lesson, completed evidence, pending confirmations, and next action. Keep the state local to the learner-confirmed project root.
 
 ## Commands
 
@@ -66,7 +82,8 @@ Use `scripts/tutor.py` for confirmed initialization, status, current-lesson resu
 | `/upstack reverse` | Guide a source-grounded trace through one feature, request, or architecture path. |
 | `/upstack build` | Start or resume learner-owned implementation stages. |
 | `/upstack stage` | Show, start, pause, verify, or complete one vertical stage. |
-| `/upstack lesson` | Resume or show the current learner-led lesson by stage number. |
+| `/upstack curriculum` | Show the persisted curriculum identifiers and lock/current/completed status without generating lesson content. |
+| `/upstack lesson <id>` | Generate only the requested curriculum lesson by ID, day number, stage ID, title, or alias. |
 | `/upstack hint` | Give the next non-spoiling implementation hint. |
 | `/upstack assess` | Review the current learner attempt and record feedback without silently replacing it. |
 | `/upstack discover` | Search public repositories using metadata first, then enrich top candidates with README and targeted root files. |

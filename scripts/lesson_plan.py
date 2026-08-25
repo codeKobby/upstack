@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+CURRICULUM_ID = "upstack-fresh-start-core"
+NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
 
 STAGE_TEMPLATES = [
     {
@@ -92,12 +95,17 @@ def build_plan(brief: dict[str, Any], learner_profile: dict[str, Any] | None = N
     for index, template in enumerate(STAGE_TEMPLATES, start=1):
         item = dict(template)
         item["sequence"] = index
+        item["day"] = index
+        item["day_id"] = f"day-{index:02d}"
+        word = NUMBER_WORDS.get(index)
+        item["aliases"] = [str(index), f"day {index}", f"day-{index:02d}", f"stage {index}", f"stage-{index:02d}"] + ([f"day {word}", f"day-{word}", f"stage {word}", f"stage-{word}"] if word else [])
         item["status"] = "current" if index == 1 else "locked"
         item["mode"] = mode
         stages.append(item)
     return {
         "schema_version": SCHEMA_VERSION,
         "kind": "upstack-lesson-led-fresh-start",
+        "curriculum": {"id": CURRICULUM_ID, "title": "Fresh-start project apprenticeship", "version": 1, "lesson_generation": "explicit-request-only"},
         "project_brief": brief,
         "learner": {"name": learner_name, "profile": learner_profile},
         "mode": mode,
@@ -114,6 +122,41 @@ def build_plan(brief: dict[str, Any], learner_profile: dict[str, Any] | None = N
         },
         "stages": stages,
     }
+
+
+def _normalize_identifier(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip().casefold())
+
+
+def resolve_lesson(plan: dict[str, Any], identifier: Any = None) -> dict[str, Any]:
+    """Resolve a curriculum, day, stage ID, alias, or title without generating content."""
+    raw = "" if identifier is None else str(identifier).strip()
+    normalized = _normalize_identifier(raw)
+    curriculum = plan.get("curriculum", {"id": CURRICULUM_ID, "title": "Fresh-start project apprenticeship"})
+    if not normalized or normalized in {_normalize_identifier(curriculum.get("id")), "curriculum", "roadmap", "current"}:
+        stage_number = next((int(item["sequence"]) for item in plan["stages"] if item.get("status") == "current"), 1)
+        return {"status": "curriculum" if normalized in {_normalize_identifier(curriculum.get("id")), "curriculum", "roadmap"} else "resolved", "identifier": raw or "current", "curriculum": curriculum, "stage": stage_number, "lesson": plan["stages"][stage_number - 1]}
+    for item in plan["stages"]:
+        values = {item.get("id"), item.get("day_id"), item.get("title"), *(item.get("aliases") or [])}
+        if normalized in {_normalize_identifier(value) for value in values}:
+            return {"status": "resolved", "identifier": raw, "curriculum": curriculum, "stage": int(item["sequence"]), "lesson": item}
+    word_match = next((number for number, word in NUMBER_WORDS.items() if normalized in {f"day {word}", f"day-{word}", f"stage {word}", f"stage-{word}", word}), None)
+    if word_match is not None and word_match <= len(plan["stages"]):
+        item = plan["stages"][word_match - 1]
+        return {"status": "resolved", "identifier": raw, "curriculum": curriculum, "stage": word_match, "lesson": item}
+    match = re.fullmatch(r"(?:day|stage)[ -]?(\d+)", normalized) or re.fullmatch(r"(\d+)", normalized)
+    if match:
+        number = int(match.group(1))
+        if 1 <= number <= len(plan["stages"]):
+            item = plan["stages"][number - 1]
+            return {"status": "resolved", "identifier": raw, "curriculum": curriculum, "stage": number, "lesson": item}
+    title_matches = [item for item in plan["stages"] if normalized and normalized in _normalize_identifier(item.get("title"))]
+    if len(title_matches) == 1:
+        item = title_matches[0]
+        return {"status": "resolved", "identifier": raw, "curriculum": curriculum, "stage": int(item["sequence"]), "lesson": item}
+    if len(title_matches) > 1:
+        return {"status": "ambiguous", "identifier": raw, "candidates": [{"id": item["id"], "day": item["day"], "title": item["title"]} for item in title_matches]}
+    return {"status": "not_found", "identifier": raw, "candidates": [{"id": item["id"], "day": item["day"], "title": item["title"]} for item in plan["stages"]]}
 
 
 def current_lesson(plan: dict[str, Any], stage: int = 1) -> dict[str, Any]:
@@ -156,17 +199,23 @@ def render_lesson(lesson: dict[str, Any], plan: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def write_artifacts(plan: dict[str, Any], output_dir: Path, stage: int = 1) -> dict[str, str]:
+def render_curriculum(plan: dict[str, Any]) -> str:
+    return render_blueprint(plan).replace("# Fresh-Start Lesson Blueprint", "# Curriculum")
+
+
+def write_artifacts(plan: dict[str, Any], output_dir: Path, stage: int = 1, *, include_current: bool = True, completed_stages: list[int] | None = None) -> dict[str, str]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    lesson = current_lesson(plan, stage)
     files = {
+        "curriculum": output_dir / "CURRICULUM.md",
         "blueprint": output_dir / "LESSON_BLUEPRINT.md",
-        "current_lesson": output_dir / "CURRENT_LESSON.md",
         "progress": output_dir / "progress.json",
     }
+    files["curriculum"].write_text(render_curriculum(plan), encoding="utf-8")
     files["blueprint"].write_text(render_blueprint(plan), encoding="utf-8")
-    files["current_lesson"].write_text(render_lesson(lesson, plan), encoding="utf-8")
-    files["progress"].write_text(json.dumps({"current_stage": stage, "completed_stages": [], "mode": plan["mode"]}, indent=2) + "\n", encoding="utf-8")
+    if include_current:
+        files["current_lesson"] = output_dir / "CURRENT_LESSON.md"
+        files["current_lesson"].write_text(render_lesson(current_lesson(plan, stage), plan), encoding="utf-8")
+    files["progress"].write_text(json.dumps({"curriculum_id": plan.get("curriculum", {}).get("id", CURRICULUM_ID), "current_stage": stage, "completed_stages": completed_stages or [], "mode": plan["mode"]}, indent=2) + "\n", encoding="utf-8")
     return {key: str(value) for key, value in files.items()}
 
 

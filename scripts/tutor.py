@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from lesson_plan import build_plan, current_lesson, write_artifacts
+from lesson_plan import build_plan, current_lesson, render_lesson, resolve_lesson, write_artifacts
 from onboarding import validate_destination
 from project_state import project_id, state_paths
 
@@ -120,7 +120,7 @@ def initialize_project(
     profile = learner_profile or {}
     plan = build_plan(brief, profile, mode=mode)
     lesson_dir = paths["root"] / "lessons"
-    written = write_artifacts(plan, lesson_dir, 1)
+    written = write_artifacts(plan, lesson_dir, 1, include_current=False)
     project_name = brief.get("name") or brief.get("title") or target.name
     project_record = {
         "schema_version": SCHEMA_VERSION,
@@ -166,11 +166,29 @@ def load_project(destination: str | Path) -> tuple[dict[str, Any], dict[str, Any
     return state, plan, paths
 
 
-def resume_project(destination: str | Path, stage: int | None = None) -> dict[str, Any]:
+def resume_project(destination: str | Path, identifier: Any = None, *, write: bool = False) -> dict[str, Any]:
     state, plan, paths = load_project(destination)
-    selected = stage or int(state["current_stage"])
+    lookup = resolve_lesson(plan, identifier)
+    if lookup["status"] in {"ambiguous", "not_found"}:
+        return {"status": lookup["status"], "identifier": lookup.get("identifier"), "candidates": lookup.get("candidates", []), "curriculum": plan.get("curriculum"), "resume": True, "write_performed": False}
+    selected = int(lookup["stage"])
+    current_stage = int(state["current_stage"])
+    if selected > current_stage and selected not in state.get("completed_stages", []):
+        return {"status": "locked", "identifier": lookup.get("identifier"), "curriculum": plan.get("curriculum"), "stage": selected, "title": lookup["lesson"].get("title"), "current_stage": current_stage, "unlock_after": current_stage, "message": "This lesson is on the curriculum but is locked until the current stage evidence gate is complete.", "resume": True, "write_performed": False}
     lesson = current_lesson(plan, selected)
-    return {"status": "resumed", "state": state, "lesson": lesson, "state_file": str(paths["state"]), "resume": True, "write_performed": False}
+    result = {"status": "resumed", "identifier": lookup.get("identifier"), "curriculum": plan.get("curriculum"), "state": state, "lesson": lesson, "state_file": str(paths["state"]), "resume": True, "write_performed": False}
+    if write:
+        lesson_path = paths["root"] / "lessons" / "CURRENT_LESSON.md"
+        lesson_path.parent.mkdir(parents=True, exist_ok=True)
+        lesson_path.write_text(render_lesson(lesson, plan), encoding="utf-8")
+        state["last_action"] = "lesson_requested"
+        state["next_action"] = "record_current_lesson_evidence"
+        state["updated_at"] = _now()
+        _write_json(paths["state"], state)
+        (paths["root"] / "STATE.md").write_text(_render_state_summary(state), encoding="utf-8")
+        result["written_file"] = str(lesson_path)
+        result["write_performed"] = True
+    return result
 
 
 def record_evidence(destination: str | Path, stage: int, evidence: dict[str, Any], *, write: bool = False) -> dict[str, Any]:
@@ -194,7 +212,7 @@ def record_evidence(destination: str | Path, stage: int, evidence: dict[str, Any
         state["next_action"] = "resume_current_lesson" if next_stage <= len(plan["stages"]) else "portfolio_or_review"
         result["unlocked"] = next_stage <= len(plan["stages"])
         if next_stage <= len(plan["stages"]):
-            write_artifacts(plan, paths["root"] / "lessons", next_stage)
+            write_artifacts(plan, paths["root"] / "lessons", next_stage, completed_stages=state["completed_stages"])
     else:
         state["last_action"] = "evidence_recorded_stage_remains_active"
         state["next_action"] = "resume_current_lesson"
@@ -222,9 +240,14 @@ def main() -> int:
     status = sub.add_parser("status", help="show persisted project and lesson status")
     status.add_argument("--destination", required=True, type=Path)
 
-    lesson = sub.add_parser("lesson", help="resume the current lesson or a requested stage")
+    curriculum = sub.add_parser("curriculum", help="show the persisted curriculum without generating a lesson")
+    curriculum.add_argument("--destination", required=True, type=Path)
+
+    lesson = sub.add_parser("lesson", help="generate one requested curriculum lesson")
     lesson.add_argument("--destination", required=True, type=Path)
-    lesson.add_argument("--stage", type=int)
+    lesson.add_argument("identifier", nargs="?", help="curriculum ID, day number, stage ID, alias, or title")
+    lesson.add_argument("--stage", type=int, help="legacy numeric alias for the lesson identifier")
+    lesson.add_argument("--write", action="store_true", help="write only the requested lesson artifact")
 
     record = sub.add_parser("record", help="record learner evidence and optionally unlock the next stage")
     record.add_argument("--destination", required=True, type=Path)
@@ -237,9 +260,12 @@ def main() -> int:
         result = initialize_project(args.destination, _load_json(args.brief_file, {}), _load_json(args.learner_profile_file, {}), workspace=args.workspace, mode=args.mode, onboarding_answers=_load_json(args.answers_file, {}), confirm=args.confirm)
     elif args.command == "status":
         state, plan, paths = load_project(args.destination)
-        result = {"status": "active", "state": state, "stage_count": len(plan["stages"]), "state_file": str(paths["state"]), "resume": True, "write_performed": False}
+        result = {"status": "active", "curriculum": plan.get("curriculum"), "state": state, "stage_count": len(plan["stages"]), "state_file": str(paths["state"]), "resume": True, "write_performed": False}
+    elif args.command == "curriculum":
+        state, plan, paths = load_project(args.destination)
+        result = {"status": "curriculum", "curriculum": plan.get("curriculum"), "stages": [{"id": item["id"], "day": item.get("day"), "day_id": item.get("day_id"), "title": item["title"], "status": "complete" if int(item["sequence"]) in state.get("completed_stages", []) else ("current" if int(item["sequence"]) == int(state["current_stage"]) else "locked")} for item in plan["stages"]], "resume": True, "write_performed": False}
     elif args.command == "lesson":
-        result = resume_project(args.destination, args.stage)
+        result = resume_project(args.destination, args.identifier or args.stage, write=args.write)
     else:
         result = record_evidence(args.destination, args.stage, _load_json(args.evidence_file, {}), write=args.write)
     print(json.dumps(result, indent=2))

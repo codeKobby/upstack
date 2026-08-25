@@ -31,8 +31,9 @@ A confirmed initialization writes:
 .upstack/STATE.md           concise human-readable status
 .upstack/PRODUCT_BRIEF.md   learner-approved product contract
 .upstack/lessons/plan.json  complete curriculum with current and locked stages
+.upstack/lessons/CURRICULUM.md
 .upstack/lessons/LESSON_BLUEPRINT.md
-.upstack/lessons/CURRENT_LESSON.md
+.upstack/lessons/CURRENT_LESSON.md  created only after an explicit lesson request
 .upstack/lessons/progress.json
 ```
 
@@ -47,4 +48,4 @@ State is written only after explicit confirmation or an explicit write command. 
 | `project_selection_required` | Ask for an explicit local project path; do not infer a child directory. |
 | `intent_required` | Ask the context-independent intent question before inspecting workspace contents. |
 
-The current lesson is addressed by number only after the project is resolved. `/upstack lesson 3` must not silently switch projects, and `/upstack build`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, and `/upstack portfolio` must use the same gate.
+The curriculum is addressed by stable identifiers only after the project is resolved. `/upstack curriculum` shows IDs and lock status without generating lesson content. `/upstack lesson 3`, `/upstack lesson day-two`, `/upstack lesson stage-03-vertical-slice`, `/upstack lesson <title>`, and `/upstack lesson upstack-fresh-start-core` resolve against that project’s `plan.json`. If an identifier is ambiguous or locked, report candidates or the unlock condition instead of teaching it early. `/upstack build`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, and `/upstack portfolio` must use the same gate.

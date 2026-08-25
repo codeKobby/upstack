@@ -47,6 +47,8 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 | `/upstack reverse` | Trace and explain one real feature or architecture path. |
 | `/upstack build` | Start or resume learner-owned implementation stages. |
 | `/upstack stage` | Show, start, pause, verify, or complete one vertical slice. |
+| `/upstack curriculum` | Show the active curriculum and stable day/stage identifiers without generating lessons. |
+| `/upstack lesson <id>` | Generate only the requested lesson by curriculum ID, day number, stage ID, title, or alias. |
 | `/upstack hint` | Give the next non-spoiling implementation hint. |
 | `/upstack discover` | Search public repositories using metadata first, then README and targeted root-file signals. |
 | `/upstack choose` | Select and record a project candidate and its provenance. |
@@ -85,7 +87,8 @@ A confirmed project stores its local identity and continuity record under `.upst
 ```bash
 python3 scripts/tutor.py init --destination /path/to/project --brief-file /path/to/brief.json --confirm
 python3 scripts/tutor.py status --destination /path/to/project
-python3 scripts/tutor.py lesson --destination /path/to/project
+python3 scripts/tutor.py curriculum --destination /path/to/project
+python3 scripts/tutor.py lesson --destination /path/to/project day-two --write
 python3 scripts/tutor.py record --destination /path/to/project --stage 1 --evidence-file /path/to/evidence.json --write
 ```
 
@@ -155,7 +158,7 @@ orient → inventory → trace → runnable foundation → first vertical slice
 → expansion → hardening → quality → explanation and portfolio
 ```
 
-The assistant uses modeling, coaching, targeted scaffolding, reflection, and gradual fading. It first maps the complete project curriculum and evidence gates, but generates only the current lesson or stage when requested or unlocked. It should not generate the full implementation or every future lesson at once.
+The assistant uses modeling, coaching, targeted scaffolding, reflection, and gradual fading. It first maps the complete project curriculum and evidence gates, but generates no lesson content until the learner explicitly requests a curriculum item. Use `/upstack curriculum` to inspect the roadmap, then `/upstack lesson 1`, `/upstack lesson day-two`, `/upstack lesson stage-03-vertical-slice`, or `/upstack lesson <title>` to start one item. The requested lesson is resolved against the active project’s persisted curriculum; locked items are reported as locked rather than taught early. It should not generate the full implementation or every future lesson at once.
 
 ### Destination and project mode
 

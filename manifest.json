@@ -1,6 +1,6 @@
 {
   "name": "upstack",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "IDE-native project apprenticeship for repository inventory, reverse engineering, adaptive rebuild recipes, staged implementation, evidence-backed interview preparation, learner skill calibration, metadata-first GitHub discovery, and honest portfolio evidence.",
   "skills": ["upstack"],
   "agents": [
@@ -42,7 +42,8 @@
     "stitch_mcp": "optional-design-exploration-accelerator; portable-markdown-fallback",
     "interview_preparation": "requirements-first; learner-profile-and-diagnostics; evidence-backed-question-patterns; progressive-feedback",
     "fresh_start_lessons": "guided-lesson-default; learner-authored-slices; evidence-gated-progression; bounded-assistance",
-    "project_tracking": "per-project-identity; shared-command-gate; resumable-state; no-implicit-project-selection"
+    "project_tracking": "per-project-identity; shared-command-gate; resumable-state; no-implicit-project-selection",
+    "curriculum_first": "stable-curriculum-identifiers; explicit-lesson-generation; day-stage-title-lookup; locked-stage-protection"
   },
   "license": "MIT"
 }
