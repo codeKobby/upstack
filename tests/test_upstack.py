@@ -14,6 +14,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 if not (ROOT / "scripts" / "inventory_repo.py").exists():
     ROOT = Path("/home/ubuntu/skills/upstack")
+sys.path.insert(0, str(ROOT / "scripts"))
 INVENTORY = ROOT / "scripts" / "inventory_repo.py"
 DISCOVERY = ROOT / "scripts" / "discover_github.py"
 DISCOVERY_INTERACTION = ROOT / "scripts" / "discovery_interaction.py"
@@ -24,6 +25,8 @@ INSTALL_COMPANION = ROOT / "scripts" / "install_video_companion.py"
 UI_DESIGN = ROOT / "scripts" / "ui_design.py"
 INTERVIEW_PREP = ROOT / "scripts" / "interview_prep.py"
 LESSON_PLAN = ROOT / "scripts" / "lesson_plan.py"
+PROJECT_STATE = ROOT / "scripts" / "project_state.py"
+TUTOR = ROOT / "scripts" / "tutor.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -383,7 +386,7 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.5.0")
+        self.assertEqual(matrix["version"], "1.6.0")
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
         self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
@@ -496,6 +499,83 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue(Path(written["blueprint"]).exists())
             self.assertTrue(Path(written["current_lesson"]).exists())
             self.assertTrue(Path(written["progress"]).exists())
+
+    def test_project_state_gate_requires_onboarding_for_unknown_project_and_resumes_known_project(self):
+        module = load_module("upstack_project_state", PROJECT_STATE)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "known-project"
+            root.mkdir()
+            (root / "package.json").write_text("{}", encoding="utf-8")
+            unknown = module.command_gate(root, "lesson")
+            self.assertEqual(unknown["status"], "onboarding_required")
+            self.assertFalse(unknown["command_allowed"])
+            state_dir = root / ".upstack"
+            state_dir.mkdir()
+            project = {"project_id": "local-test-id", "root": str(root), "name": "Known Project"}
+            state = {"project_id": "local-test-id", "project": {"name": "Known Project"}, "mode": "guided-lesson", "current_stage": 2, "completed_stages": [1], "last_action": "stage_completed", "next_action": "resume_current_lesson", "onboarding": {"status": "initialized"}}
+            (state_dir / "PROJECT.json").write_text(json.dumps(project), encoding="utf-8")
+            (state_dir / "STATE.json").write_text(json.dumps(state), encoding="utf-8")
+            known = module.command_gate(root / "src", "hint")
+            self.assertEqual(known["status"], "known_project")
+            self.assertTrue(known["resume_required"])
+            self.assertEqual(known["state"]["current_stage"], 2)
+            self.assertEqual(known["project_id"], "local-test-id")
+            for command in ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status"]:
+                gated = module.command_gate(root / "src", command)
+                self.assertEqual(gated["status"], "known_project", command)
+                self.assertTrue(gated["resume_required"], command)
+
+    def test_onboarding_context_reports_known_project_state(self):
+        module = load_module("upstack_onboarding_state_context", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "package.json").write_text("{}", encoding="utf-8")
+            state_dir = root / ".upstack"
+            state_dir.mkdir()
+            state = {"project_id": "context-test-id", "mode": "guided-lesson", "current_stage": 3, "completed_stages": [1, 2], "last_action": "stage_completed", "next_action": "resume_current_lesson", "updated_at": "2026-08-25T00:00:00+00:00"}
+            (state_dir / "STATE.json").write_text(json.dumps(state), encoding="utf-8")
+            context = module.context(root)
+            self.assertTrue(context["known_upstack_project"])
+            self.assertEqual(context["persisted_state"]["current_stage"], 3)
+            self.assertEqual(context["persisted_state"]["next_action"], "resume_current_lesson")
+
+    def test_project_state_gate_rejects_ambiguous_broad_workspace(self):
+        module = load_module("upstack_project_state_broad", PROJECT_STATE)
+        with tempfile.TemporaryDirectory() as directory:
+            broad = Path(directory)
+            result = module.command_gate(broad, "build")
+            self.assertEqual(result["status"], "project_selection_required")
+            self.assertFalse(result["command_allowed"])
+            self.assertEqual(result["next_action"], "ask_for_explicit_project_path_or_start_onboarding")
+
+    def test_tutor_persists_identity_resumes_and_only_unlocks_complete_evidence(self):
+        module = load_module("upstack_tutor", TUTOR)
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            destination = workspace / "agent-flow"
+            brief = {"name": "Agent Flow", "problem": "Teach orchestration through a usable project."}
+            needs_confirmation = module.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, confirm=False)
+            self.assertEqual(needs_confirmation["status"], "confirmation_required")
+            created = module.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, confirm=True)
+            self.assertEqual(created["status"], "initialized")
+            self.assertTrue((destination / ".upstack" / "PROJECT.json").exists())
+            self.assertTrue((destination / ".upstack" / "STATE.json").exists())
+            self.assertEqual(created["state"]["current_stage"], 1)
+            resumed = module.resume_project(destination)
+            self.assertEqual(resumed["status"], "resumed")
+            self.assertEqual(resumed["lesson"]["sequence"], 1)
+            partial = module.record_evidence(destination, 1, {"attempt": "code", "verification": "passed"}, write=True)
+            self.assertEqual(partial["status"], "evidence_incomplete")
+            self.assertFalse(partial["unlocked"])
+            self.assertEqual(partial["state"]["current_stage"], 1)
+            complete = module.record_evidence(destination, 1, {"attempt": "code", "verification": "passed", "explanation": "I can explain it", "feedback": "reviewed"}, write=True)
+            self.assertEqual(complete["status"], "ready_to_unlock")
+            self.assertTrue(complete["unlocked"])
+            self.assertEqual(complete["state"]["current_stage"], 2)
+            already = module.initialize_project(destination, brief, confirm=True)
+            self.assertEqual(already["status"], "already_initialized")
+            self.assertTrue(already["resume"])
 
     def test_broad_workspace_requires_exact_destination_and_confirmation(self):
         module = load_module("upstack_onboarding_destination", ROOT / "scripts" / "onboarding.py")

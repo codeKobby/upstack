@@ -1,7 +1,7 @@
 {
   "name": "upstack",
-  "version": "1.5.0",
-  "description": "IDE-native project apprenticeship with lesson-led fresh-start builds, repository reverse engineering, staged implementation, evidence-backed interview preparation, learner skill calibration, metadata-first GitHub discovery, and honest portfolio evidence.",
+  "version": "1.6.0",
+  "description": "IDE-native project apprenticeship with lesson-led fresh-start builds, persistent project tracking, repository reverse engineering, staged implementation, evidence-backed interview preparation, learner skill calibration, metadata-first GitHub discovery, and honest portfolio evidence.",
   "author": {
     "name": "codeKobby",
     "url": "https://github.com/codeKobby"

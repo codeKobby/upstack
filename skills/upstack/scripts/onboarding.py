@@ -74,10 +74,24 @@ def _local_candidates(path: Path, limit: int = 8) -> list[dict[str, str]]:
     return candidates
 
 
+def _persisted_upstack_state(project: str | None) -> dict[str, Any] | None:
+    if not project:
+        return None
+    state_file = Path(project) / ".upstack" / "STATE.json"
+    try:
+        if not state_file.is_file():
+            return None
+        value = json.loads(state_file.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def context(path: Path) -> dict[str, Any]:
     path = path.expanduser().resolve()
     root = _git_root(path)
     project = root or (str(path) if _has_project_markers(path) else None)
+    persisted = _persisted_upstack_state(project)
     return {
         "cwd": str(path),
         "is_home": _is_home(path),
@@ -86,7 +100,17 @@ def context(path: Path) -> dict[str, Any]:
         "project_root": project,
         "local_candidates": _local_candidates(path),
         "state_path": str(Path(project) / ".upstack") if project else None,
-        "provenance": "read-only path and marker inspection; no project code executed",
+        "known_upstack_project": bool(persisted),
+        "persisted_state": {
+            "project_id": persisted.get("project_id"),
+            "mode": persisted.get("mode"),
+            "current_stage": persisted.get("current_stage"),
+            "completed_stages": persisted.get("completed_stages", []),
+            "last_action": persisted.get("last_action"),
+            "next_action": persisted.get("next_action"),
+            "updated_at": persisted.get("updated_at"),
+        } if persisted else None,
+        "provenance": "read-only path, marker, and optional Upstack-state inspection; no project code executed",
     }
 
 

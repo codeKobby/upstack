@@ -2,6 +2,18 @@
 
 Upstack onboarding is a short adaptive interview, not a questionnaire dump. Its purpose is to collect only the decisions that change the first project route, focus, stage size, evidence plan, destination, or design gate.
 
+## Shared project gate for every command
+
+Before handling `/upstack` or any Upstack subcommand, resolve the current project with:
+
+```bash
+python3 scripts/project_state.py . --command <subcommand>
+```
+
+If the result is `known_project`, load `.upstack/PROJECT.json` and `.upstack/STATE.json`, show or use the persisted project identity and current state, and resume the requested command. Do not restart the intent interview merely because the user invoked a different command. If the result is `onboarding_required`, preserve the requested command while completing onboarding. If it returns `project_selection_required`, ask for an explicit project path instead of selecting a child of a broad workspace. This gate applies to project, inventory, concepts, focus, blueprint, reverse, build, stage, lesson, hint, assess, discover, choose, source, role, portfolio, and status commands.
+
+After confirmed initialization, use `scripts/tutor.py` to persist the project record, normalized onboarding answers, learner profile, curriculum, current stage, attempts, evidence, pending confirmations, and next action. Resume with `scripts/tutor.py status` or `scripts/tutor.py lesson`; do not create a second `.upstack/` state tree.
+
 ## First-run behavior
 
 The agent must begin with the learner’s intent. It must not inspect the current folder, repository, files, stack, home-directory contents, or child project names to decide the first question. The first turn is an intent gate only.
@@ -121,9 +133,11 @@ Ask for the destination category and exact local path before accepting a project
 
 ## Persistence and resumption
 
-Keep an in-memory draft while the interview is incomplete. If the host can persist session context, store only normalized answers and a continuation token until the learner confirms `.upstack/` creation. After confirmation, write `USER_PROFILE.md`, `FOCUS.md`, `PROJECT_INVENTORY.md`, and `progress.json` together as the initial state.
+Keep an in-memory draft while the interview is incomplete. If the host can persist session context, store only normalized answers and a continuation token until the learner confirms `.upstack/` creation. After confirmation, write the project identity, normalized onboarding answers, learner profile, first curriculum plan, current lesson, and `STATE.json` together as the initial state.
 
-If the learner returns later with a partial `.upstack/`, resume from the first unanswered decision. Do not repeat questions whose answers are present and still valid. If the repository changed materially, mark affected inventory fields stale and ask whether to refresh them.
+If the learner returns later with `.upstack/STATE.json`, resolve the project first and resume from its `current_stage`, `completed_stages`, `attempts`, `pending_confirmation`, and `next_action`. Do not repeat questions whose answers are present and still valid, do not restart the initial intent question for another Upstack command, and do not create a second curriculum. If the repository changed materially, mark affected inventory fields stale and ask whether to refresh them.
+
+If a project has recognizable source markers but no valid `.upstack/STATE.json`, return `onboarding_required`; do not treat it as known or claim that onboarding was completed. If the current location is a broad workspace, return `project_selection_required` and ask for the exact project path.
 
 ## Question quality checks
 

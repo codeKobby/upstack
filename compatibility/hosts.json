@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -18,6 +18,15 @@
     "remote_writes": "explicit-confirmation-required",
     "fallback": "portable-markdown-wireframe-and-design-contract",
     "planner": "scripts/ui_design.py BRIEF_JSON --mode portable --write"
+  },
+  "project_tracking": {
+    "gate": "scripts/project_state.py --command SUBCOMMAND",
+    "identity": ".upstack/PROJECT.json",
+    "state": ".upstack/STATE.json",
+    "known_project": "load-and-resume; do-not-restart-onboarding",
+    "unknown_project": "route-through-onboarding-before-project-command",
+    "broad_workspace": "ask-for-explicit-project-path; never-select-child-implicitly",
+    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status"]
   },
   "fresh_start_policy": {
     "default_mode": "guided-lesson",

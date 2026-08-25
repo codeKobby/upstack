@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.5.0"
+  version: "1.6.0"
   package: upstack
 ---
 
@@ -20,7 +20,10 @@ The first intent question should distinguish outcomes such as **learning how an 
 
 After intent is known, distinguish a **selected project** from a broad workspace. A home directory, monorepo parent, downloads folder, or editor workspace containing several folders is not itself a project. Never summarize the agent’s home directory as the learner’s repository and never silently choose a child folder.
 
-Use `scripts/onboarding.py <path> --json` to produce the next question plan. **The planner is not the question UI.** Immediately inspect the current callable tool set or verified host capability, then invoke the matching native question tool with only the returned `questions` payload. For OpenCode, call its `question` tool; for another host, call its verified native equivalent. Do not stop after printing the JSON, do not ask the model to simulate the tool, and do not print a prose preamble or duplicate numbered list when a native tool is callable. If no callable native question tool exists, render the single returned question as a short numbered or lettered list and do not call it clickable.
+Before executing **any** Upstack command, run `scripts/project_state.py <path> --command <subcommand>` as the shared project-resolution gate. If it returns `known_project`, load the reported project identity and state and resume the requested command; do not restart onboarding or create a second curriculum. If it returns `onboarding_required`, route the user through onboarding before project work. If it returns `project_selection_required`, ask for an explicit project path; never choose a child of a broad workspace implicitly. The only exceptions are a context-independent intent question and read-only capability detection.
+
+Use `scripts/onboarding.py <path> --json` to produce the next question plan. **The planner is not the question UI.** Immediately inspect the current callable tool set or verified host capability, then invoke the matching native question tool with only the returned `questions` payload.
+ For OpenCode, call its `question` tool; for another host, call its verified native equivalent. Do not stop after printing the JSON, do not ask the model to simulate the tool, and do not print a prose preamble or duplicate numbered list when a native tool is callable. If no callable native question tool exists, render the single returned question as a short numbered or lettered list and do not call it clickable.
 
 The default is one active decision per turn. Any host with a verified native multi-question tool may use a short precomputed chain before submission. Use `scripts/onboarding.py <path> --question-mode native-multi --host <host-id>` only for a prefix whose later questions are independent of earlier answers, such as focus followed by time budget. Submit only the returned `questions` array. Recompute after submission whenever an answer changes the next question. Never chain intent with source selection, outcome detail with a dependent source question, focus with skill calibration, an external-action approval, or discovery actions with candidate selection. If host capabilities are unknown, use one question per call. OpenCode is one known example of a host with this capability; it is not a special workflow requirement.
 
@@ -40,15 +43,21 @@ For public discovery, say:
 
 > I’ll search repository metadata first, then enrich the best candidates with README and targeted configuration signals. I’ll show you the shortlist before any clone, fork, installation, or execution.
 
-If the selected stateful workflow has no `.upstack/` state, do not stop with a generic initialization menu. Announce the next user-facing action, complete the relevant onboarding questions, show the draft inventory and first blueprint summary, and ask once before creating `.upstack/`. Preserve the original request and continue it after that confirmation. Stateless previews and read-only discovery can continue without persistent state.
+If the selected stateful workflow has no `.upstack/` state, do not stop with a generic initialization menu. Announce the next user-facing action, complete the relevant onboarding questions, show the draft inventory and first blueprint summary, and ask once before creating `.upstack/`. Preserve the original request and continue it after that confirmation. When `.upstack/STATE.json` exists, treat the project as known: show the persisted project name, project ID, onboarding status, mode, current stage, completed evidence, pending confirmation, and next action, then resume the requested command. Stateless previews and read-only discovery can continue without persistent state.
 
 Use `.upstack/` for Upstack state. Do not create, modify, or delete it without the learner’s confirmation. A destination selection or resolved-path confirmation is not permission to scaffold, clone, install, execute, create a branch/worktree, or publish; request those side-effect confirmations separately.
+
+## Project state and every-command resume
+
+Read `references/project-state.md` before implementing or routing any project command. Treat `scripts/project_state.py <path> --command <subcommand>` as the mandatory shared gate for `/upstack`, `/upstack init`, `/upstack inventory`, `/upstack concepts`, `/upstack focus`, `/upstack blueprint`, `/upstack reverse`, `/upstack build`, `/upstack stage`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack discover`, `/upstack choose`, `/upstack source`, `/upstack role`, `/upstack portfolio`, `/upstack status`, and project-specific aliases. A `known_project` result means load `.upstack/PROJECT.json` and `.upstack/STATE.json` and resume. An `onboarding_required` result means preserve the requested command while completing onboarding. A `project_selection_required` result means ask for the explicit project path. Do not restart the intent question or select a child directory implicitly when persisted state exists.
+
+Use `scripts/tutor.py` for confirmed initialization, status, current-lesson resumption, and evidence recording. Persist project identity, onboarding answers, current mode, current lesson, completed evidence, pending confirmations, and next action. Keep the state local to the learner-confirmed project root.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `/upstack` | Route a natural-language request to the correct Upstack workflow. |
+| `/upstack` | Resolve project state, then route a natural-language request to the correct Upstack workflow. |
 | `/upstack init` | Inspect the workspace, interview the learner, and create confirmed `.upstack/` state. |
 | `/upstack inventory` | Produce the “ingredients” report: metadata, languages, frameworks, dependencies, files, flows, tests, operations, and unknowns. |
 | `/upstack concepts` | Map concepts and technologies to source files, symbols, tests, and user journeys. |
@@ -57,13 +66,16 @@ Use `.upstack/` for Upstack state. Do not create, modify, or delete it without t
 | `/upstack reverse` | Guide a source-grounded trace through one feature, request, or architecture path. |
 | `/upstack build` | Start or resume learner-owned implementation stages. |
 | `/upstack stage` | Show, start, pause, verify, or complete one vertical stage. |
+| `/upstack lesson` | Resume or show the current learner-led lesson by stage number. |
 | `/upstack hint` | Give the next non-spoiling implementation hint. |
+| `/upstack assess` | Review the current learner attempt and record feedback without silently replacing it. |
 | `/upstack discover` | Search public repositories using metadata first, then enrich top candidates with README and targeted root files. |
 | `/upstack choose` | Select a candidate and record its source, license, difficulty, scope, and provenance. |
 | `/upstack source` | Separately confirm read-only reference, clone, fork, workspace creation, installation, and execution actions. |
 | `/upstack role` | Map a user-provided job description or skill requirement to project stages, interview competencies, evidence gaps, and practice questions. |
 | `/upstack portfolio` | Generate portfolio documentation from observed learner work only. |
-| `/upstack status` | Show active project, focus, stage, evidence, uncertainty, and next action. |
+| `/upstack status` | Pass through the shared project gate, then show active project, focus, stage, evidence, uncertainty, and next action. |
+| `/upstack project` | Resolve the current project identity and show whether Upstack onboarding/state exists. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 
 Present meaningful choices by **actually invoking** the host’s native question tool when it is callable, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. A returned `next_question` or `question_plan` is an instruction to make that tool call, not user-facing content. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable. Keep action choices and object choices separate: never show an action menu and a candidate-number menu in the same turn, and interpret numeric replies only within the active question.
@@ -81,6 +93,10 @@ Create `.upstack/` lazily with:
 ```text
 .upstack/
 ├── CONFIG.md
+├── PROJECT.json
+├── STATE.json
+├── STATE.md
+├── PRODUCT_BRIEF.md
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md
 ├── CONCEPT_MAP.md

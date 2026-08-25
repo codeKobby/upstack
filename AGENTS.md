@@ -14,6 +14,12 @@ Use `scripts/inventory_repo.py` for read-only local analysis. Start from reposit
 
 Use `scripts/discover_projects.py` for intent-driven public project discovery. Create multiple GitHub query lanes, optionally use YouTube/X or host web-search context, extract and verify repository links, preserve source provenance, and rank against the learner’s criteria. Use `scripts/discover_github.py` as the GitHub-only fallback. Never clone or fork from discovery.
 
+## Project resolution
+
+Before running any Upstack command, use `scripts/project_state.py . --command <subcommand>`. A `known_project` result is authoritative for local continuity: load its `.upstack/PROJECT.json` and `.upstack/STATE.json`, then resume the requested command without restarting onboarding. An `onboarding_required` result preserves the user’s requested command while onboarding is completed. A `project_selection_required` result requires an explicit project path; never choose a child of a broad workspace. This gate applies to `/upstack`, `build`, `lesson`, `hint`, `assess`, `blueprint`, `portfolio`, `status`, and other project commands.
+
+A project identity is local to its canonical root. Keep `.upstack/PROJECT.json`, `.upstack/STATE.json`, `STATE.md`, `PRODUCT_BRIEF.md`, the lesson plan, attempts, evidence, and pending confirmations together. Do not create a global registry or silently write state outside the learner-confirmed project destination.
+
 ## Learner ownership
 
 Use `scripts/onboarding.py` and `references/onboarding.md` to plan the question flow in this order: intent, outcome detail; for interview preparation, job requirements and self-assessment/diagnostic; then project mode, destination, project brief or source, optional UI-design path, focus, time budget, relevant skill confidence, and guidance mode.
