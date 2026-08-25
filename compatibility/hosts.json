@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -20,6 +20,7 @@
     "planner": "scripts/ui_design.py BRIEF_JSON --mode portable --write"
   },
   "project_tracking": {
+    "router": "scripts/command_router.py --command SUBCOMMAND --json",
     "gate": "scripts/project_state.py --command SUBCOMMAND",
     "identity": ".upstack/PROJECT.json",
     "state": ".upstack/STATE.json",
@@ -28,8 +29,10 @@
     "state_pointers": ["project_root", "workspace_root", "destination", "source", "curriculum", "current_lesson", "design", "history_file"],
     "installed_skill_path_guard": "step-out-to-containing-workspace;-global-skill-path-is-not-a-project",
     "broad_workspace": "ask-for-explicit-project-path; never-select-child-implicitly",
-    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update", "continue", "resume"],
-    "history": ".upstack/HISTORY.jsonl"
+    "commands": ["upstack", "help", "upstack-help", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update", "continue", "resume"],
+    "history": ".upstack/HISTORY.jsonl",
+    "help_aliases": ["/upstack help", "upstack-help"],
+    "automatic_dispatch": "route-on-every-invocation-before-workflow"
   },
   "package_manager_policy": {
     "new_js_ts_default": "recommend-pnpm-then-ask",

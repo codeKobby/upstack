@@ -721,6 +721,7 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
 
 
 CHAINABLE_QUESTION_IDS = {"focus", "time_budget"}
+HELP_COMMANDS = {"help", "upstack-help"}
 
 
 def question_chain(ctx: dict[str, Any] | None, answers: dict[str, Any], *, max_questions: int = 3) -> list[dict[str, Any]]:
@@ -767,6 +768,23 @@ def question_plan(
     """Build a host-neutral delivery plan from verified question capabilities."""
     if question_mode not in {"auto", "native-single", "native-multi"}:
         raise ValueError(f"unsupported question mode: {question_mode}")
+    if command.casefold() in HELP_COMMANDS:
+        return {
+            "host": host,
+            "mode": "show-help",
+            "command": command,
+            "questions": [],
+            "resume": False,
+            "help": True,
+            "delivery": {
+                "required_action": "show_upstack_help",
+                "native_tool": None,
+                "send_only": "none",
+                "prose_prompt_allowed": True,
+                "fallback": "show_command_reference_without_project_resolution",
+                "must_not": ["ask-initial-intent", "inspect-project", "start-onboarding"],
+            },
+        }
     if command.casefold() in {"continue", "resume"} and (not ctx or not ctx.get("known_upstack_project")) and not answers.get("force_onboarding"):
         return {
             "host": host,

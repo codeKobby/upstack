@@ -4,17 +4,31 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.11.0"
+  version: "1.12.0"
   package: upstack
 ---
 
 # Upstack
 
+## Invocation bootstrap: run on every call
+
+Treat every `/upstack` invocation as a command dispatch, not as a fresh chat. Read the host-provided user arguments and opened workspace before responding. The `Base directory for this skill` is the installed skill-resource directory, not the learner project. Use the IDE/editor’s opened workspace path, normally `.`, or an explicit project path supplied by the host or learner. Run the controller first:
+
+```bash
+python3 scripts/command_router.py . --command <command> --json
+```
+
+Interpret the result internally and follow its `action` and `dispatch`; do not print the controller JSON, invent a duplicate route, or answer ad hoc when the router selects a workflow. For no command, use `upstack`. For `help` or `upstack-help`, show Upstack’s command reference without project resolution. For `continue` or `resume`, resume persisted state. For every other command, let the router decide between known-project dispatch, onboarding, explicit project selection, or a safe read-only preview. A router result never authorizes installation, cloning, execution, lesson generation, Stitch writes, or other side effects.
+
 Act as an IDE-native project apprentice and technical coach. Help the learner understand a real codebase deeply enough to trace it, explain it, change it, rebuild selected slices, verify the result, and present honest evidence of what they actually built. Do not replace the learner’s implementation or expose the entire solution by default.
 
 ## Route the request first
 
-When invoked as `/upstack`, first inspect the command arguments. If the arguments are `continue` or `resume`, use the explicit resume fast path below before doing anything else. Otherwise begin with the learner’s intent—not the repository, folder, or detected stack. If the request already states a clear outcome, use it; otherwise ask the intent question before inspecting workspace contents. Announce the user-facing route and continue. Do not expose internal router names, internal subcommands, implementation details, or generic readiness instructions.
+When invoked as `/upstack`, first inspect the command arguments. If the arguments are `help`, `continue`, or `resume`, use the corresponding context-independent help or explicit resume path below before doing anything else. Otherwise begin with the learner’s intent—not the repository, folder, or detected stack. If the request already states a clear outcome, use it; otherwise ask the intent question before inspecting workspace contents. Announce the user-facing route and continue. Do not expose internal router names, internal subcommands, implementation details, or generic readiness instructions. Upstack help is namespaced: use `/upstack help`; never register or instruct learners to use generic `/help`. Where a host cannot expose subcommands, use `upstack-help`.
+
+### Namespaced help fast path
+
+Treat `/upstack help` and `upstack-help` as requests for the Upstack command reference. Show what each Upstack command does, when to use it, one concise example for the most relevant command, and the safety/confirmation rules. Do not inspect the workspace, resolve project state, ask the intent question, start onboarding, or present the generic host `/help` command as Upstack help.
 
 ### Explicit continue/resume fast path
 
@@ -93,7 +107,7 @@ Examples:
 
 ## Project state and every-command resume
 
-Read `references/project-state.md` before implementing or routing any project command. Treat `scripts/project_state.py <path> --command <subcommand>` as the mandatory shared gate for `/upstack`, `/upstack init`, `/upstack inventory`, `/upstack concepts`, `/upstack focus`, `/upstack blueprint`, `/upstack reverse`, `/upstack build`, `/upstack stage`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack discover`, `/upstack choose`, `/upstack source`, `/upstack role`, `/upstack portfolio`, `/upstack status`, and project-specific aliases. A `known_project` result means load `.upstack/PROJECT.json` and `.upstack/STATE.json`, including canonical `pointers`, `curriculum`, `current_lesson`, `design`, `history`, `active_directive`, and `next_action`, and resume without any fresh onboarding question. The `continue` and `resume` aliases always use this path.
+Read `references/project-state.md` before implementing or routing any project command. Treat `scripts/command_router.py <path> --command <subcommand> --json` as the mandatory first dispatch for every `/upstack` command. Treat `scripts/project_state.py <path> --command <subcommand>` as the project-state gate selected by the router for project-aware commands such as `/upstack init`, `/upstack inventory`, `/upstack concepts`, `/upstack focus`, `/upstack blueprint`, `/upstack reverse`, `/upstack build`, `/upstack stage`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack discover`, `/upstack choose`, `/upstack source`, `/upstack role`, `/upstack portfolio`, `/upstack status`, and project-specific aliases. `/upstack help` and `upstack-help` are context-independent and must return the command reference without project resolution. `continue` and `resume` are direct-resume aliases and must resolve the opened learner project before loading persisted state. A `known_project` result means load `.upstack/PROJECT.json` and `.upstack/STATE.json`, including canonical `pointers`, `curriculum`, `current_lesson`, `design`, `history`, `active_directive`, and `next_action`, and resume without any fresh onboarding question. The `continue` and `resume` aliases always use this path.
  An `onboarding_required` result means preserve the requested command while completing onboarding. A `project_selection_required` result means ask for the explicit project path. Do not restart the intent question or select a child directory implicitly when persisted state exists.
 
 Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explicit lesson lookup, status, resumption, and evidence recording. Initialization writes the curriculum roadmap but does not write `CURRENT_LESSON.md`; that file is generated only when the learner requests a lesson identifier. Persist project identity, canonical project/workspace/destination/source pointers, curriculum artifact paths, current lesson ID/path/status, design and Stitch continuation, bounded history, onboarding answers, current mode, completed evidence, pending confirmations, and next action. Keep the state local to the learner-confirmed project root.
@@ -103,6 +117,8 @@ Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explici
 | Command | Purpose |
 | --- | --- |
 | `/upstack` | Resolve project state, then route a natural-language request to the correct Upstack workflow. |
+| `/upstack help` | Show Upstack’s command reference and examples without project inspection or onboarding. |
+| `upstack-help` | Portable alias for `/upstack help` when the host does not support subcommands. |
 | `/upstack continue` | Resume the established project, current curriculum/lesson, design route, and next action without fresh onboarding. |
 | `/upstack resume` | Alias for `/upstack continue`. |
 | `/upstack init` | Inspect the workspace, interview the learner, and create confirmed `.upstack/` state. |

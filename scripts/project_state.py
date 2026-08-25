@@ -28,6 +28,7 @@ PROJECT_MARKERS = {
 }
 SKILL_HOST_DIRS = {".agents", ".opencode", ".claude", ".cline", ".clinerules", ".github", ".agent", ".codex"}
 RESUME_COMMANDS = {"continue", "resume"}
+HELP_COMMANDS = {"help", "upstack-help"}
 
 
 def canonical(path: str | Path) -> Path:
@@ -183,6 +184,21 @@ def resolve_project_root(start: str | Path) -> tuple[Path | None, str]:
 
 def command_gate(start: str | Path, command: str) -> dict[str, Any]:
     path = canonical(start)
+    if command.casefold() in HELP_COMMANDS:
+        return {
+            "schema_version": 2,
+            "command": command,
+            "input_path": str(path),
+            "project_root": None,
+            "detection": "not_applicable",
+            "skill_resource_path": None,
+            "write_performed": False,
+            "resume_required": False,
+            "status": "help_available",
+            "command_allowed": True,
+            "next_action": "show_upstack_help",
+            "message": "Show Upstack help; do not inspect project state or start onboarding.",
+        }
     root, detection = resolve_project_root(path)
     skill_context = installed_skill_context(path)
     result: dict[str, Any] = {

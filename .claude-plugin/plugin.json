@@ -1,7 +1,7 @@
 {
   "name": "upstack",
-  "version": "1.11.0",
-  "description": "IDE-native project apprenticeship with curriculum-first lesson lookup, live-session handoff, package-manager-aware setup, lesson-led fresh-start builds, persistent project tracking with canonical pointers and durable history, repository reverse engineering, staged implementation, evidence-backed interview preparation, learner skill calibration, metadata-first GitHub discovery, and honest portfolio evidence.",
+  "version": "1.12.0",
+  "description": "IDE-native project apprenticeship with curriculum-first lesson lookup, live-session handoff, package-manager-aware setup, lesson-led fresh-start builds, persistent project tracking with canonical pointers, automatic command dispatch, namespaced help, and durable history, repository reverse engineering, staged implementation, evidence-backed interview preparation, learner skill calibration, metadata-first GitHub discovery, and honest portfolio evidence.",
   "author": {
     "name": "codeKobby",
     "url": "https://github.com/codeKobby"

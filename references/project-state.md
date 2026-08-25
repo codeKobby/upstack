@@ -11,6 +11,19 @@ Upstack is project-aware. Every command first resolves the requested path to a c
 
 A project identity is the stable hash of its canonical local root path, stored in `.upstack/PROJECT.json` together with the root, display name, state path, creation time, and onboarding status. The identity is local and must not be presented as a remote repository identity.
 
+## Shared command router
+
+Every Upstack invocation first passes through `scripts/command_router.py`. The router is controller-only: it resolves the host-opened workspace, reads persisted state, and returns the next workflow action. It must run from the learner project context, not from the directory containing the installed skill.
+
+```bash
+python3 scripts/command_router.py . --command help --json
+python3 scripts/command_router.py . --command continue --json
+python3 scripts/command_router.py . --command curriculum --json
+python3 scripts/command_router.py . --command lesson --json day-two
+```
+
+`/upstack help` and `upstack-help` are context-independent aliases and return the Upstack command reference without project resolution or onboarding. `/upstack continue` and `/upstack resume` resolve the opened project and automatically dispatch the persisted next action. The router may select a read-only helper or native host workflow, but it never silently generates lessons, writes code, calls a remote MCP, installs packages, clones/forks, or executes project commands.
+
 ## Shared command gate
 
 Run:
@@ -28,7 +41,7 @@ python3 scripts/onboarding.py . --command continue --json
 
 A known-project result is a resume instruction, not an onboarding question. Follow its `next_action` and persisted pointers; do not invoke the initial intent question.
 
-The result is controller data, not a user-facing prompt. A `known_project` result means the command must load the persisted state and resume. An `onboarding_required` result means the command must route through onboarding before project work. A `project_selection_required` result means the command must ask for an explicit project path. A `resume_unavailable` result from `continue` or `resume` means no established project was found; offer initialization or an explicit project path without silently starting a new route. A command must not restart the initial intent or create a second curriculum merely because the user invoked a different Upstack subcommand.
+The result is controller data, not a user-facing prompt. A `help_available` result means show Upstack’s namespaced command reference without inspecting project state. A `known_project` result means the command must load the persisted state and resume. An `onboarding_required` result means the command must route through onboarding before project work. A `project_selection_required` result means the command must ask for an explicit project path. A `resume_unavailable` result from `continue` or `resume` means no established project was found; offer initialization or an explicit project path without silently starting a new route. A command must not restart the initial intent or create a second curriculum merely because the learner invoked a different Upstack subcommand.
 
 ## Persisted state
 
@@ -62,6 +75,7 @@ On a new session, the gate must return the pointer and resume context before any
 
 | Gate result | Behavior |
 | --- | --- |
+| `help_available` | Show Upstack help through `/upstack help` or `upstack-help`; do not resolve project state or ask onboarding questions. |
 | `known_project` | Show or use the persisted project pointers and resume the requested command without onboarding. |
 | `resume_unavailable` | No established project exists at the resolved location; offer initialization or an explicit existing-project path. |
 | `onboarding_required` | Preserve the request, complete onboarding, and ask before creating state. |

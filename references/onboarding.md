@@ -2,13 +2,23 @@
 
 Upstack onboarding is a short adaptive interview, not a questionnaire dump. Its purpose is to collect only the decisions that change the first project route, focus, stage size, evidence plan, destination, or design gate.
 
-## Shared project gate for every command
+## Shared command router and project gate
 
-Before handling `/upstack` or any Upstack subcommand, resolve the current project with:
+Before handling `/upstack` or any Upstack subcommand, run the controller-only command router from the host-opened learner workspace, not from the installed skill directory:
+
+```bash
+python3 scripts/command_router.py . --command <subcommand> --json
+```
+
+`/upstack help` and `upstack-help` are context-independent help aliases. Show the Upstack command reference without resolving a project, inspecting files, or starting onboarding. Never use or document generic `/help` as the Upstack help command.
+
+For project-aware commands, resolve the current project with:
 
 ```bash
 python3 scripts/project_state.py . --command <subcommand>
 ```
+
+The router must run before this gate for `/upstack`, `/upstack continue`, `/upstack resume`, and all project subcommands. If it returns `known_project`, follow its `action` and persisted `next_action`; do not return to first-run questions. If it returns `onboarding_required`, preserve the requested command while onboarding is completed. If it returns `resume_unavailable`, do not silently begin onboarding for a `continue` request.
 
 If the result is `known_project`, load `.upstack/PROJECT.json` and `.upstack/STATE.json`, including canonical project/workspace/destination/source pointers, curriculum artifacts, current lesson, design/Stitch status, history, pending confirmations, and next action. Resume the requested command directly without asking the initial intent question or fresh onboarding questions. If the input path is inside a project-local installed skill directory such as `.agents/skills/upstack`, step out to the containing workspace first; never inspect the installed skill package as the learner project. If the result is `onboarding_required`, preserve the requested command while completing onboarding. If it returns `project_selection_required`, ask for an explicit project path instead of selecting a child of a broad workspace. This gate applies to project, inventory, concepts, focus, blueprint, reverse, build, stage, lesson, hint, assess, discover, choose, source, role, portfolio, and status commands.
 

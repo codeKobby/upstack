@@ -29,6 +29,7 @@ PROJECT_STATE = ROOT / "scripts" / "project_state.py"
 TUTOR = ROOT / "scripts" / "tutor.py"
 SESSION_HANDOFF = ROOT / "scripts" / "session_handoff.py"
 PACKAGE_MANAGER = ROOT / "scripts" / "package_manager.py"
+COMMAND_ROUTER = ROOT / "scripts" / "command_router.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -42,6 +43,58 @@ def load_module(name: str, path: Path):
 
 
 class UpstackTests(unittest.TestCase):
+    def test_project_state_help_is_context_independent(self):
+        module = load_module("upstack_project_state_help", PROJECT_STATE)
+        with tempfile.TemporaryDirectory() as directory:
+            skill_path = Path(directory) / ".agents" / "skills" / "upstack"
+            skill_path.mkdir(parents=True)
+            (skill_path / "SKILL.md").write_text("---\nname: upstack\n---\n", encoding="utf-8")
+            result = module.command_gate(skill_path, "help")
+            self.assertEqual(result["status"], "help_available")
+            self.assertEqual(result["detection"], "not_applicable")
+            self.assertIsNone(result["project_root"])
+            self.assertEqual(result["next_action"], "show_upstack_help")
+
+    def test_command_router_namespaces_help_and_bypasses_project_resolution(self):
+        module = load_module("upstack_command_router_help", COMMAND_ROUTER)
+        with tempfile.TemporaryDirectory() as directory:
+            result = module.route(Path(directory), "help")
+            self.assertEqual(result["status"], "help_available")
+            self.assertEqual(result["action"], "show_help")
+            self.assertIsNone(result["dispatch"])
+            self.assertIn("use-generic-/help", result["must_not"])
+            alias = module.route(Path(directory), "upstack-help")
+            self.assertEqual(alias["normalized_command"], "help")
+            self.assertEqual(alias["action"], "show_help")
+
+    def test_command_router_automatically_dispatches_known_project_next_action(self):
+        module = load_module("upstack_command_router_known", COMMAND_ROUTER)
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "ai-workflow"
+            state_dir = project / ".upstack"
+            (state_dir / "lessons").mkdir(parents=True)
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            (state_dir / "PROJECT.json").write_text(json.dumps({"project_id": "router-id", "root": str(project), "name": "ai-workflow"}), encoding="utf-8")
+            (state_dir / "STATE.json").write_text(json.dumps({"project_id": "router-id", "mode": "guided-lesson", "current_stage": 2, "completed_stages": [1], "next_action": "resume_current_lesson", "current_lesson": {"id": "stage-02-foundation", "status": "active", "path": str(state_dir / "lessons" / "CURRENT_LESSON.md")}, "pointers": {"project_root": str(project)}}), encoding="utf-8")
+            (state_dir / "lessons" / "CURRENT_LESSON.md").write_text("# Foundation", encoding="utf-8")
+            result = module.route(project, "upstack")
+            self.assertEqual(result["status"], "known_project")
+            self.assertFalse(result["onboarding"])
+            self.assertEqual(result["action"], "resume_current_lesson")
+            self.assertEqual(result["lesson_identifier"], "stage-02-foundation")
+            self.assertEqual(result["dispatch"]["helper"], "scripts/tutor.py")
+
+    def test_command_router_preserves_unknown_request_for_onboarding(self):
+        module = load_module("upstack_command_router_unknown", COMMAND_ROUTER)
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            result = module.route(project, "lesson", ["day-one"])
+            self.assertEqual(result["status"], "onboarding_required")
+            self.assertTrue(result["onboarding"])
+            self.assertEqual(result["requested_command"], "lesson")
+            self.assertEqual(result["arguments"], ["day-one"])
+
     def test_inventory_reports_languages_manifests_readme_and_skips_generated_dirs(self):
         module = load_module("upstack_inventory", INVENTORY)
         with tempfile.TemporaryDirectory() as directory:
@@ -391,10 +444,17 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.11.0")
+        self.assertEqual(matrix["version"], "1.12.0")
         self.assertIn("project_root", matrix["project_tracking"]["state_pointers"])
+
         self.assertIn("current_lesson", matrix["project_tracking"]["state_pointers"])
         self.assertEqual(matrix["project_tracking"]["history"], ".upstack/HISTORY.jsonl")
+        self.assertIn("continue", matrix["project_tracking"]["commands"])
+        self.assertIn("resume", matrix["project_tracking"]["commands"])
+        self.assertIn("help", matrix["project_tracking"]["commands"])
+        self.assertIn("upstack-help", matrix["project_tracking"]["commands"])
+        self.assertEqual(matrix["project_tracking"]["help_aliases"], ["/upstack help", "upstack-help"])
+        self.assertEqual(matrix["project_tracking"]["automatic_dispatch"], "route-on-every-invocation-before-workflow")
 
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")

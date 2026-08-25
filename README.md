@@ -39,6 +39,8 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 | Command | Purpose |
 | --- | --- |
 | `/upstack` | Route a natural-language request to the right project-apprenticeship workflow. |
+| `/upstack help` | Show Upstack’s command reference, examples, and safety rules without project inspection or onboarding. |
+| `upstack-help` | Portable alias for `/upstack help` when the host does not support subcommands. |
 | `/upstack continue` | Resume the established project, curriculum, current lesson, design route, history, and next action without fresh onboarding. |
 | `/upstack resume` | Alias for `/upstack continue`. |
 | `/upstack init` | Inspect the workspace, interview the learner, and create confirmed `.upstack/` state. |
@@ -65,7 +67,7 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 
 ## Smooth first run
 
-When you run `/upstack`, Upstack first captures your intended outcome before inspecting the current folder, repository, files, detected stack, or home-directory contents. It begins with:
+When you run `/upstack`, Upstack first checks for the namespaced commands `/upstack help`, `/upstack continue`, and `/upstack resume`. Help is context-independent and must not inspect a project or start onboarding. For ordinary `/upstack` requests, Upstack first captures your intended outcome before inspecting the current folder, repository, files, detected stack, or home-directory contents. It begins with:
 
 > What would you like to accomplish first?
 
@@ -104,11 +106,19 @@ Choosing a manager different from the detected one creates a separate migration-
 
 ## Project-aware commands
 
-Every Upstack command uses the same project-resolution gate before command-specific work:
+Every Upstack invocation first passes through the controller-only command router. It reads the host-opened workspace and persisted state, then selects the next safe workflow without writing files or executing project code:
+
+```bash
+python3 scripts/command_router.py . --command <subcommand> --json
+```
+
+`/upstack help` and `upstack-help` are context-independent and bypass project resolution. They show the Upstack command reference. Generic `/help` is not an Upstack command. Every other invocation is routed through project state before command-specific work:
 
 ```bash
 python3 scripts/project_state.py . --command <subcommand>
 ```
+
+For a known project, the router follows persisted `next_action`, curriculum, current lesson, design/Stitch state, and history. It does not ask the initial intent question or create a second curriculum. For an unknown project, it preserves the requested command and routes through onboarding. The controller output is internal; the agent follows its selected helper or native workflow rather than printing the JSON.
 
 `/upstack continue` and `/upstack resume` are explicit resume commands, not intent prompts. Use:
 
