@@ -39,6 +39,8 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 | Command | Purpose |
 | --- | --- |
 | `/upstack` | Route a natural-language request to the right project-apprenticeship workflow. |
+| `/upstack continue` | Resume the established project, curriculum, current lesson, design route, history, and next action without fresh onboarding. |
+| `/upstack resume` | Alias for `/upstack continue`. |
 | `/upstack init` | Inspect the workspace, interview the learner, and create confirmed `.upstack/` state. |
 | `/upstack inventory` | Create the project “ingredients” report. |
 | `/upstack concepts` | Map technologies and concepts to real source files, symbols, tests, and flows. |
@@ -108,7 +110,16 @@ Every Upstack command uses the same project-resolution gate before command-speci
 python3 scripts/project_state.py . --command <subcommand>
 ```
 
-If the result is `known_project`, Upstack loads `.upstack/PROJECT.json` and `.upstack/STATE.json`, shows or uses the persisted project identity, canonical project/workspace/destination/source pointers, onboarding status, mode, curriculum, current lesson, completed evidence, design/Stitch route, history, pending confirmation, and next action, then resumes without onboarding. If the input path is inside a project-local installed skill directory such as `.agents/skills/upstack`, the gate steps out to the containing workspace first. If the result is `onboarding_required`, Upstack preserves the requested command and routes through onboarding instead of starting a second curriculum. If the result is `project_selection_required`, it asks for an explicit project path and never chooses a child of a broad workspace implicitly. This gate applies to `/upstack`, `/upstack build`, `/upstack curriculum`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, `/upstack portfolio`, `/upstack project`, `/upstack status`, `/upstack update`, and the other project commands.
+`/upstack continue` and `/upstack resume` are explicit resume commands, not intent prompts. Use:
+
+```bash
+python3 scripts/project_state.py . --command continue
+python3 scripts/onboarding.py . --command continue --json
+```
+
+For a `known_project` result, follow the persisted `next_action` and pointers immediately. Do not ask the initial intent question, inspect the installed skill directory, create a second curriculum, or generate a new lesson unless explicitly requested.
+
+If the result is `known_project`, Upstack loads `.upstack/PROJECT.json` and `.upstack/STATE.json`, shows or uses the persisted project identity, canonical project/workspace/destination/source pointers, onboarding status, mode, curriculum, current lesson, completed evidence, design/Stitch route, history, pending confirmation, and next action, then resumes without onboarding. If the input path is inside a project-local installed skill directory such as `.agents/skills/upstack`, the gate steps out to the containing workspace first. If the result is `resume_unavailable` for `continue` or `resume`, Upstack offers initialization or an explicit existing-project path without silently starting a new route. If the result is `onboarding_required`, Upstack preserves the requested command and routes through onboarding instead of starting a second curriculum. If the result is `project_selection_required`, it asks for an explicit project path and never chooses a child of a broad workspace implicitly. This gate applies to `/upstack`, `/upstack continue`, `/upstack resume`, `/upstack build`, `/upstack curriculum`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, `/upstack portfolio`, `/upstack project`, `/upstack status`, `/upstack update`, and the other project commands.
 
 A confirmed project stores its local identity and continuity record under `.upstack/PROJECT.json` and `.upstack/STATE.json`. `STATE.json` includes pointers to the project root, workspace, destination, source repository or local source, curriculum artifacts, current lesson, design/Stitch artifacts, and history. `.upstack/HISTORY.jsonl` records initialization, lesson requests, evidence, and approved live-session corrections. The tutor can initialize, resume, show status, record evidence, and unlock the next stage only when the evidence gate is complete:
 

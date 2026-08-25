@@ -14,6 +14,10 @@ If the result is `known_project`, load `.upstack/PROJECT.json` and `.upstack/STA
 
 After confirmed initialization, use `scripts/tutor.py` to persist the project record, normalized onboarding answers, learner profile, canonical pointers, curriculum, current lesson status, design/Stitch route, history, current stage, attempts, evidence, pending confirmations, and next action. Resume with `scripts/tutor.py status` or `scripts/tutor.py lesson`; do not create a second `.upstack/` state tree.
 
+### Explicit continue/resume
+
+`/upstack continue` and `/upstack resume` are explicit resume commands. Resolve the host-provided opened workspace or current project directory first, not the installed skill directory. Run the shared gate with `--command continue`. If the result is `known_project`, load the persisted project pointers and follow `next_action`: show the curriculum when curriculum review is pending, resume the active `CURRENT_LESSON.md` when a lesson is active, continue the current implementation stage when it is active, or present the pending confirmation/evidence step. Do not ask the initial intent question, run fresh onboarding, create another curriculum, or generate a new lesson unless the persisted state or the learner’s explicit lesson argument requires it. If the result is `resume_unavailable`, offer initialization or an explicit existing-project path rather than silently starting a new route.
+
 ## First-run behavior
 
 The agent must begin with the learner’s intent. It must not inspect the current folder, repository, files, stack, home-directory contents, or child project names to decide the first question. The first turn is an intent gate only.

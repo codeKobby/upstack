@@ -19,7 +19,16 @@ Run:
 python3 scripts/project_state.py . --command <subcommand>
 ```
 
-The result is controller data, not a user-facing prompt. A `known_project` result means the command must load the persisted state and resume. An `onboarding_required` result means the command must route through onboarding before project work. A `project_selection_required` result means the command must ask for an explicit project path. A command must not restart the initial intent or create a second curriculum merely because the user invoked a different Upstack subcommand.
+For `/upstack continue` or `/upstack resume`, use the explicit fast path:
+
+```bash
+python3 scripts/project_state.py . --command continue
+python3 scripts/onboarding.py . --command continue --json
+```
+
+A known-project result is a resume instruction, not an onboarding question. Follow its `next_action` and persisted pointers; do not invoke the initial intent question.
+
+The result is controller data, not a user-facing prompt. A `known_project` result means the command must load the persisted state and resume. An `onboarding_required` result means the command must route through onboarding before project work. A `project_selection_required` result means the command must ask for an explicit project path. A `resume_unavailable` result from `continue` or `resume` means no established project was found; offer initialization or an explicit project path without silently starting a new route. A command must not restart the initial intent or create a second curriculum merely because the user invoked a different Upstack subcommand.
 
 ## Persisted state
 
@@ -54,6 +63,7 @@ On a new session, the gate must return the pointer and resume context before any
 | Gate result | Behavior |
 | --- | --- |
 | `known_project` | Show or use the persisted project pointers and resume the requested command without onboarding. |
+| `resume_unavailable` | No established project exists at the resolved location; offer initialization or an explicit existing-project path. |
 | `onboarding_required` | Preserve the request, complete onboarding, and ask before creating state. |
 | `project_selection_required` | Ask for an explicit local project path; do not infer a child directory. |
 | `intent_required` | Ask the context-independent intent question before inspecting workspace contents. |

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -28,7 +28,7 @@
     "state_pointers": ["project_root", "workspace_root", "destination", "source", "curriculum", "current_lesson", "design", "history_file"],
     "installed_skill_path_guard": "step-out-to-containing-workspace;-global-skill-path-is-not-a-project",
     "broad_workspace": "ask-for-explicit-project-path; never-select-child-implicitly",
-    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update"],
+    "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update", "continue", "resume"],
     "history": ".upstack/HISTORY.jsonl"
   },
   "package_manager_policy": {

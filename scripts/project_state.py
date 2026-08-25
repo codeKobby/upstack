@@ -27,6 +27,7 @@ PROJECT_MARKERS = {
     ".git",
 }
 SKILL_HOST_DIRS = {".agents", ".opencode", ".claude", ".cline", ".clinerules", ".github", ".agent", ".codex"}
+RESUME_COMMANDS = {"continue", "resume"}
 
 
 def canonical(path: str | Path) -> Path:
@@ -195,22 +196,24 @@ def command_gate(start: str | Path, command: str) -> dict[str, Any]:
         "resume_required": False,
     }
     if root is None:
+        is_resume = command.casefold() in RESUME_COMMANDS
         result.update({
-            "status": "project_selection_required",
+            "status": "resume_unavailable" if is_resume else "project_selection_required",
             "command_allowed": False,
-            "next_action": "ask_for_explicit_project_path_or_start_onboarding",
-            "message": "The current location is a broad workspace; do not choose a child project implicitly.",
+            "next_action": "offer_initialize_or_choose_existing_project" if is_resume else "ask_for_explicit_project_path_or_start_onboarding",
+            "message": "No established Upstack project was found at this location; choose an existing project or start initialization." if is_resume else "The current location is a broad workspace; do not choose a child project implicitly.",
         })
         return result
     paths = state_paths(root)
     state = _read_json(paths["state"])
     project = _read_json(paths["project"])
     if state is None:
+        is_resume = command.casefold() in RESUME_COMMANDS
         result.update({
-            "status": "onboarding_required",
+            "status": "resume_unavailable" if is_resume else "onboarding_required",
             "command_allowed": command in {"init", "capabilities"},
-            "next_action": "run_or_resume_onboarding_before_project_command",
-            "message": "This project has no valid persisted Upstack state. Start onboarding; do not restart a second curriculum.",
+            "next_action": "offer_initialize_or_choose_existing_project" if is_resume else "run_or_resume_onboarding_before_project_command",
+            "message": "This project has no established Upstack state to resume; preserve the request and offer initialization." if is_resume else "This project has no valid persisted Upstack state. Start onboarding; do not restart a second curriculum.",
             "state_path": str(paths["root"]),
         })
         return result

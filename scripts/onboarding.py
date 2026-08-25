@@ -762,14 +762,34 @@ def question_plan(
     *,
     host: str = "generic",
     question_mode: str = "auto",
+    command: str = "onboarding",
 ) -> dict[str, Any]:
     """Build a host-neutral delivery plan from verified question capabilities."""
     if question_mode not in {"auto", "native-single", "native-multi"}:
         raise ValueError(f"unsupported question mode: {question_mode}")
-    if ctx and ctx.get("known_upstack_project") and not answers.get("force_onboarding"):
+    if command.casefold() in {"continue", "resume"} and (not ctx or not ctx.get("known_upstack_project")) and not answers.get("force_onboarding"):
+        return {
+            "host": host,
+            "mode": "resume-unavailable",
+            "command": command,
+            "questions": [],
+            "resume": False,
+            "resume_unavailable": True,
+            "message": "No established Upstack project was found at the resolved location; offer initialization or an explicit existing-project path.",
+            "delivery": {
+                "required_action": "offer_initialize_or_choose_existing_project",
+                "native_tool": None,
+                "send_only": "none",
+                "prose_prompt_allowed": True,
+                "fallback": "show_resume_unavailable_message_without_starting_fresh_onboarding",
+                "must_not": ["ask-initial-intent", "inspect-installed-skill-as-project", "create-second-curriculum"],
+            },
+        }
+    if command.casefold() in {"continue", "resume", "onboarding"} and ctx and ctx.get("known_upstack_project") and not answers.get("force_onboarding"):
         return {
             "host": host,
             "mode": "resume-known-project",
+            "command": command,
             "questions": [],
             "resume": True,
             "resume_context": ctx.get("resume_context"),
@@ -811,6 +831,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", nargs="?", type=Path, default=Path.cwd())
     parser.add_argument("--answers", type=Path, help="JSON file containing normalized answers")
+    parser.add_argument("--command", default="onboarding", help="requested Upstack command; continue/resume bypasses fresh onboarding for a known project")
     parser.add_argument("--json", action="store_true", help="emit JSON")
     parser.add_argument("--host", default="generic", help="host identifier for provenance; capability is selected separately")
     parser.add_argument("--question-mode", choices=("auto", "native-single", "native-multi"), default="auto", help="verified host question capability")
@@ -820,7 +841,7 @@ def main() -> int:
     answers: dict[str, Any] = {}
     if args.answers:
         answers = json.loads(args.answers.read_text(encoding="utf-8"))
-    if answers.get("goal"):
+    if args.command.casefold() in {"continue", "resume"} or answers.get("goal"):
         ctx = context(args.path)
     else:
         ctx = intent_context()
@@ -828,7 +849,7 @@ def main() -> int:
         args.question_mode = "native-multi"
     if args.design_tool:
         ctx["design_tools"] = args.design_tool
-    payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host, question_mode=args.question_mode)}
+    payload = {"context": ctx, "question_plan": question_plan(ctx, answers, host=args.host, question_mode=args.question_mode, command=args.command)}
     print(json.dumps(payload, indent=2))
     return 0
 

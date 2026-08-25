@@ -391,7 +391,7 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.10.0")
+        self.assertEqual(matrix["version"], "1.11.0")
         self.assertIn("project_root", matrix["project_tracking"]["state_pointers"])
         self.assertIn("current_lesson", matrix["project_tracking"]["state_pointers"])
         self.assertEqual(matrix["project_tracking"]["history"], ".upstack/HISTORY.jsonl")
@@ -569,6 +569,9 @@ class OnboardingTests(unittest.TestCase):
             unknown = module.command_gate(root, "lesson")
             self.assertEqual(unknown["status"], "onboarding_required")
             self.assertFalse(unknown["command_allowed"])
+            no_resume = module.command_gate(root, "continue")
+            self.assertEqual(no_resume["status"], "resume_unavailable")
+            self.assertEqual(no_resume["next_action"], "offer_initialize_or_choose_existing_project")
             state_dir = root / ".upstack"
             state_dir.mkdir()
             project = {"project_id": "local-test-id", "root": str(root), "name": "Known Project"}
@@ -580,7 +583,7 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue(known["resume_required"])
             self.assertEqual(known["state"]["current_stage"], 2)
             self.assertEqual(known["project_id"], "local-test-id")
-            for command in ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update"]:
+            for command in ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update", "continue", "resume"]:
                 gated = module.command_gate(root / "src", command)
                 self.assertEqual(gated["status"], "known_project", command)
                 self.assertTrue(gated["resume_required"], command)
@@ -637,6 +640,40 @@ class OnboardingTests(unittest.TestCase):
             self.assertEqual(context["persisted_state"]["current_stage"], 3)
             self.assertEqual(context["persisted_state"]["next_action"], "resume_current_lesson")
 
+    def test_onboarding_cli_continue_without_state_does_not_start_intent(self):
+        module = load_module("upstack_onboarding_cli_continue_unknown", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            with patch.object(sys, "argv", ["onboarding.py", str(project), "--command", "continue", "--host", "opencode", "--json"]):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(module.main(), 0)
+            payload = json.loads(output.getvalue())
+            self.assertFalse(payload["context"]["known_upstack_project"])
+            self.assertEqual(payload["question_plan"]["mode"], "resume-unavailable")
+            self.assertEqual(payload["question_plan"]["questions"], [])
+            self.assertTrue(payload["question_plan"]["resume_unavailable"])
+
+    def test_onboarding_cli_continue_bypasses_intent_for_known_project(self):
+        module = load_module("upstack_onboarding_cli_continue", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            state_dir = project / ".upstack"
+            state_dir.mkdir()
+            (project / "package.json").write_text("{}", encoding="utf-8")
+            state = {"project_id": "cli-continue-id", "mode": "guided-lesson", "current_stage": 1, "next_action": "resume_current_lesson", "pointers": {"project_root": str(project)}, "current_lesson": {"id": "stage-01-orient", "status": "active"}}
+            (state_dir / "STATE.json").write_text(json.dumps(state), encoding="utf-8")
+            with patch.object(sys, "argv", ["onboarding.py", str(project), "--command", "continue", "--host", "opencode", "--json"]):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(module.main(), 0)
+            payload = json.loads(output.getvalue())
+            self.assertEqual(payload["context"]["known_upstack_project"], True)
+            self.assertEqual(payload["question_plan"]["mode"], "resume-known-project")
+            self.assertEqual(payload["question_plan"]["command"], "continue")
+            self.assertEqual(payload["question_plan"]["questions"], [])
+
     def test_known_project_onboarding_returns_resume_plan_without_questions(self):
         module = load_module("upstack_onboarding_resume_plan", ROOT / "scripts" / "onboarding.py")
         with tempfile.TemporaryDirectory() as directory:
@@ -653,6 +690,9 @@ class OnboardingTests(unittest.TestCase):
             self.assertEqual(plan["mode"], "resume-known-project")
             self.assertEqual(plan["questions"], [])
             self.assertEqual(plan["resume_context"]["current_lesson"]["id"], "stage-02-foundation")
+            continue_plan = module.question_plan(context, {}, host="opencode", command="continue")
+            self.assertEqual(continue_plan["command"], "continue")
+            self.assertEqual(continue_plan["questions"], [])
             self.assertEqual(plan["resume_context"]["design"]["mode"], "stitch-mcp")
 
     def test_live_session_handoff_requires_confirmation_and_preserves_project_progress(self):
