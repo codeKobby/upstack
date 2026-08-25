@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -18,6 +18,15 @@
     "remote_writes": "explicit-confirmation-required",
     "fallback": "portable-markdown-wireframe-and-design-contract",
     "planner": "scripts/ui_design.py BRIEF_JSON --mode portable --write"
+  },
+  "fresh_start_policy": {
+    "default_mode": "guided-lesson",
+    "planner": "scripts/lesson_plan.py --brief-file BRIEF_JSON --learner-profile-file PROFILE_JSON --mode guided-lesson",
+    "modes": ["guided-lesson", "blueprint-then-lessons", "attempt-first", "assisted-slice"],
+    "behavior": "teach-one-concept-learner-attempt-approved-verification-feedback-then-unlock",
+    "must_not": ["generate-all-lessons", "implement-meaningful-slice-before-learner-attempt", "silently-rewrite-learner-code", "unlock-without-evidence"],
+    "portable_artifacts": [".upstack/lessons/LESSON_BLUEPRINT.md", ".upstack/lessons/CURRENT_LESSON.md", ".upstack/lessons/progress.json"],
+    "scaffolding": "minimal-confirmed-foundation-only; meaningful-feature-help-is-bounded-and-reviewable"
   },
   "interview_policy": {
     "planner": "scripts/interview_prep.py --job-file JOB_JSON --sources-file SOURCES_JSON --skill-profile-file PROFILE_JSON --mode plan",

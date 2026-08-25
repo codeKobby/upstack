@@ -14,6 +14,7 @@ After the intent answer, inspect only the context required by that route:
 - Is the selected destination a new local folder, isolated worktree, source-adjacent notes, portfolio repository later, or plan-only?
 - If code or artifacts will be local, what exact folder should hold them, and does its parent exist?
 - Is the selected source a local project, public project, or new-project brief?
+- If this is a fresh start, should Upstack guide the learner step by step, show the roadmap first, let the learner attempt first, or provide tightly bounded help after an attempt?
 - Is a local path inside a Git repository or a broad workspace?
 - Does the selected project contain recognizable project markers?
 - Does the selected project already contain `.upstack/` state?
@@ -70,11 +71,12 @@ Use this order, with conditional branches:
 | 9 | What should we build from scratch? | Only for scratch mode when the learner has not supplied a brief. |
 | 10 | Which existing project should we use? | For rebuild, clone, or study mode when a source is not already selected. |
 | 11 | How should we design the user experience? | For a scratch project with a graphical interface; always offer portable Markdown and offer Stitch only when its MCP is verified callable. |
-| 12 | Where should we focus first? | After the project brief/source and design gate are known. |
-| 13 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
-| 14 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
-| 15 | How should Upstack guide you? | Before choosing scaffold and reveal depth. |
-| 16 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
+| 12 | How should we teach while building from scratch? | For scratch mode; default to lesson-led guidance and keep meaningful implementation learner-authored. |
+| 13 | Where should we focus first? | After the project brief/source, design gate, and fresh-start lesson mode are known. |
+| 14 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
+| 15 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
+| 16 | How should Upstack guide you? | Before choosing scaffold and reveal depth for non-scratch routes. |
+| 17 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
 
 Destination and project mode are distinct decisions. Never infer “clone,” “rebuild,” or “build from scratch” from the current working directory, a repository URL, or a portfolio goal. When the learner starts in a home directory, editor workspace, or other broad folder, ask for the exact local destination path instead of writing into that broad folder or silently selecting one of its children. Resolve relative paths against the stated workspace, reject `/`, the home directory, the broad workspace itself when it has no project markers, files, and paths whose parent does not exist, then show the resolved path. A valid path still requires explicit destination confirmation before any write. A destination choice does not authorize cloning, forking, branch/worktree creation, publishing, or file writes; those remain separate confirmations.
 
@@ -102,7 +104,8 @@ First ask, without inspecting the workspace:
 
 > What would you like to accomplish first?
 
-Offer the intent options above. For interview preparation, ask the role, exact requirements, AI-use policy, and learner skill/knowledge profile before asking for a source or generic question. For other project outcomes, ask the project mode and destination before asking for a source. If the route uses local code or artifacts, collect and confirm the exact destination path before selecting a source or creating files. For a scratch build, ask for the brief and UI-design path; for rebuild, clone, or study-only, ask for the existing source. This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
+Offer the intent options above. For interview preparation, ask the role, exact requirements, AI-use policy, and learner skill/knowledge profile before asking for a source or generic question. For other project outcomes, ask the project mode and destination before asking for a source. If the route uses local code or artifacts, collect and confirm the exact destination path before selecting a source or creating files. For a scratch build, ask for the brief, UI-design path, and fresh-start lesson mode; for rebuild, clone, or study-only, ask for the existing source. In every scratch lesson, require a learner attempt, approved verification, explanation or teach-back, and feedback before unlocking the next stage.
+ This ordering is the same whether the agent starts in a home directory, an existing repository, or a broad editor workspace.
 
 ### Known local repository
 

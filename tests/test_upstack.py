@@ -23,6 +23,7 @@ VIDEO_EVIDENCE = ROOT / "scripts" / "video_evidence.py"
 INSTALL_COMPANION = ROOT / "scripts" / "install_video_companion.py"
 UI_DESIGN = ROOT / "scripts" / "ui_design.py"
 INTERVIEW_PREP = ROOT / "scripts" / "interview_prep.py"
+LESSON_PLAN = ROOT / "scripts" / "lesson_plan.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -382,7 +383,7 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.4.0")
+        self.assertEqual(matrix["version"], "1.5.0")
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
         self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
@@ -472,7 +473,29 @@ class OnboardingTests(unittest.TestCase):
         answers["project_brief"] = "custom"
         self.assertEqual(module.next_question(report, answers)["id"], "ui_design")
         answers["ui_design"] = "portable"
+        self.assertEqual(module.next_question(report, answers)["id"], "fresh_start_mode")
+        answers["fresh_start_mode"] = "guided-lesson"
         self.assertEqual(module.next_question(report, answers)["id"], "focus")
+
+    def test_fresh_start_lesson_plan_maps_curriculum_and_requires_learner_evidence(self):
+        module = load_module("upstack_lesson_plan", LESSON_PLAN)
+        plan = module.build_plan({"name": "Focus Board", "problem": "Help learners track one project slice."}, {"level": "working"})
+        self.assertEqual(plan["mode"], "guided-lesson")
+        self.assertEqual(plan["default_behavior"], "teach_then_learner_attempt_then_verify_then_feedback_then_unlock")
+        self.assertEqual(len(plan["stages"]), 6)
+        self.assertEqual(plan["stages"][0]["status"], "current")
+        self.assertEqual(plan["stages"][1]["status"], "locked")
+        self.assertIn("learner attempt", plan["progression_gate"]["required_before_unlock"])
+        self.assertIn("generate every lesson at once", plan["agent_boundary"]["must_not_do"])
+        lesson = module.current_lesson(plan, 1)
+        self.assertEqual(lesson["status"], "current")
+        self.assertTrue(lesson["lesson_flow"])
+        self.assertTrue(lesson["learner_submission"]["preserve_original"])
+        with tempfile.TemporaryDirectory() as directory:
+            written = module.write_artifacts(plan, Path(directory))
+            self.assertTrue(Path(written["blueprint"]).exists())
+            self.assertTrue(Path(written["current_lesson"]).exists())
+            self.assertTrue(Path(written["progress"]).exists())
 
     def test_broad_workspace_requires_exact_destination_and_confirmation(self):
         module = load_module("upstack_onboarding_destination", ROOT / "scripts" / "onboarding.py")

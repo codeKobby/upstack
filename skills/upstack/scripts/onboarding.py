@@ -387,6 +387,20 @@ def _design_question(ctx: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _fresh_start_mode_question() -> dict[str, Any]:
+    return question(
+        "fresh_start_mode",
+        "How should we learn while building this fresh project?",
+        [
+            option("Guide me through lessons step by step", "Teach one concept and project slice, let me attempt it, review my evidence, and unlock the next stage only when I am ready.", "guided-lesson"),
+            option("Show the roadmap, then teach each lesson", "Map the complete curriculum first, but still deliver one learner-led lesson at a time.", "blueprint-then-lessons"),
+            option("Let me attempt each slice first", "Give me the outcome and checks, then coach or assess my attempt without taking over.", "attempt-first"),
+            option("Help with one confirmed slice after I try", "Use limited assistance for a current blocker, explain every change, and keep the work reviewable.", "assisted-slice"),
+        ],
+        why="Upstack is an apprenticeship: a fresh project should become a sequence of lessons and learner attempts, not a complete generated implementation.",
+    )
+
+
 def _source_question(ctx: dict[str, Any], goal: str, project_mode: str = "study") -> dict[str, Any]:
     options = []
     if project_mode == "clone":
@@ -508,6 +522,9 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
 
     if project_mode == "scratch" and not answers.get("ui_design"):
         return _design_question(ctx)
+
+    if project_mode == "scratch" and not answers.get("fresh_start_mode"):
+        return _fresh_start_mode_question()
 
     if project_mode in {"rebuild", "clone", "study"} and not answers.get("source"):
         return _source_question(ctx, goal, project_mode)

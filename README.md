@@ -137,13 +137,25 @@ The assistant uses modeling, coaching, targeted scaffolding, reflection, and gra
 
 Upstack never assumes that the opened repository is the destination or that a repository URL means “clone.” The learner explicitly chooses a project mode—**rebuild**, **build from scratch**, **clone and adapt**, or **study-only**—and then chooses a destination such as a new local folder, isolated worktree, source-adjacent notes, portfolio repository later, or plan-only. When starting from a bare editor workspace or home directory, the learner must provide the exact local folder where code or artifacts should live. Upstack resolves relative paths against that workspace, rejects the broad workspace itself when it is not a project, rejects `/`, the home directory, files, and missing-parent paths, shows the resolved destination, and asks for confirmation before writing. Clone, fork, branch/worktree creation, install, execution, and publishing remain separate confirmations.
 
-### Build from scratch and design
+### Build from scratch as a lesson
+
+A fresh start is a **lesson-led build**, not a one-shot application generator. Upstack maps the complete curriculum, then teaches one concept and project slice at a time. The learner predicts or chooses an approach, writes or edits the meaningful work, runs approved checks, explains the result, and receives feedback before the next stage unlocks.
+
+The default mode is `guided-lesson`. Learners may instead choose `blueprint-then-lessons`, `attempt-first`, or the tightly bounded `assisted-slice` mode. The agent can explain, show a small isolated example, create a minimal confirmed foundation, review work, and run approved checks. It must not generate all lessons, implement the meaningful feature before the learner tries, silently rewrite the learner’s code, or unlock the next stage without an attempt, verification, explanation or teach-back, and feedback.
+
+The lesson loop is:
+
+```text
+outcome → one concept → learner decision → bounded attempt
+→ approved verification → feedback and trade-offs → teach-back → next lesson
+```
 
 A from-scratch graphical build starts with a design gate before the first UI implementation slice. Upstack creates portable `.upstack/design/BRIEF.md`, `.upstack/design/WIREFRAME.md`, and `.upstack/design/DESIGN.md`. The wireframe is a low-fidelity Markdown artifact containing the user journey, screen responsibilities, primary actions, and loading/empty/error/success states, so it works in every coding agent.
 
-If the active host exposes a verified callable Stitch MCP and the learner chooses it, Upstack may use Stitch for visual exploration, screen generation, editing, variants, and design-system work. It must announce what will be sent and ask before remote writes, then copy approved decisions into the local design contract. Stitch is an optional accelerator, not a prerequisite, and Upstack continues with Markdown when the MCP is unavailable, unauthenticated, denied, or declined. The deterministic helper is:
+If the active host exposes a verified callable Stitch MCP and the learner chooses it, Upstack may use Stitch for visual exploration, screen generation, editing, variants, and design-system work for the current lesson only. It must announce what will be sent and ask before remote writes, then copy approved decisions into the local design contract. Stitch is an optional accelerator, not a prerequisite, and Upstack continues with Markdown when the MCP is unavailable, unauthenticated, denied, or declined. The deterministic lesson helper is:
 
 ```bash
+python3 scripts/lesson_plan.py --brief-file /path/to/brief.json --mode guided-lesson --write
 python3 scripts/ui_design.py /path/to/brief.json --mode portable --write
 ```
 

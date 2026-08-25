@@ -39,6 +39,7 @@ Every host should preserve `/upstack` or its equivalent explicit skill command. 
 | Fork and authenticated GitHub action | Authenticated `gh` or supported GitHub integration | User runs the explicit command |
 | External documentation | Browser or optional documentation MCP | Repository-owned docs |
 | Architecture diagrams | Host-supported rendering or optional diagram MCP | Markdown/text map |
+| Fresh-start lessons | `lesson_plan.py` with guided-lesson default and evidence-gated progression | Portable Markdown roadmap and current lesson |
 | Job-role research | `interview_prep.py` with user-provided job requirements, learner profile, and read-only web research | Explicit skill requirements with uncertainty labels |
 | Video follow-along map | `video_evidence.py` with approved metadata, chapters, or reviewed markers | Canonical video URL with metadata-only status |
 
@@ -61,6 +62,7 @@ Hosts must preserve the following boundaries:
 - Never invent timestamps or source anchors. Without chapters, transcript markers, or learner-reviewed timestamps, retain the video as `metadata_only` and ask before any media or transcript retrieval.
 - VS Code users may install the optional `vscode-extension/` companion. It reads `.upstack/sources/video-map.json`, embeds a recognized YouTube player when enabled, jumps to segment timestamps, highlights the active segment, opens repository and lesson anchors, and stores local progress in `.upstack/sources/video-progress.json`. This adapter is not required by Upstack and does not change the behavior of other hosts.
 - When a VS Code host is detected, run `scripts/install_video_companion.py --host HOST_ID --json` before offering installation. If it reports `ready_for_confirmation`, ask one explicit native confirmation question containing the exact source and command; run with `--confirm` only after approval. Unknown hosts, declined prompts, missing VSIX files, and unavailable launchers retain the portable Markdown/JSON path.
+- Fresh starts are lesson-led by default: teach one concept, require a learner attempt and approved verification, review and explain, then unlock the next stage. Do not generate all lessons or the meaningful feature before the learner attempts it. Minimal scaffolding and assisted slices require explicit confirmation and remain reviewable.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.
 - Upstack and Overflow keep separate state directories and exchange only compact context payloads.
 

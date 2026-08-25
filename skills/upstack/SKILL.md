@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.4.0"
+  version: "1.5.0"
   package: upstack
 ---
 
@@ -181,9 +181,35 @@ Allow the learner to choose full-stack, front-end only, backend only, data layer
 
 Use modeling, coaching, scaffolding, reflection, and gradual fading. Start with a complete example or trace when needed, then remove support by concept or subgoal. A lesson is exposure; stage evidence requires an attempt, verification, and explanation. Never reveal all future lesson content in the first response; show the roadmap and generate one current stage at a time.
 
+## Treat a fresh start as a lesson
+
+A fresh start is not a request to generate a complete application. It is a **lesson-led build**. After the brief and destination are approved, map the full curriculum and deliver only the current lesson. Use this loop:
+
+```text
+state outcome and why it matters
+→ teach one concept
+→ ask the learner to predict or choose
+→ learner attempts one bounded slice
+→ run approved verification
+→ explain feedback and trade-offs
+→ learner teach-back
+→ unlock the next slice
+```
+
+The default is `guided-lesson`. Also support `blueprint-then-lessons`, `attempt-first`, and `assisted-slice` when the learner explicitly chooses them. The agent may explain, show a small isolated example, create a minimal confirmed foundation, review work, and run approved checks. It must not generate every lesson at once, implement the meaningful feature before the learner attempts it, silently rewrite learner code, or unlock a stage without an attempt, verification, explanation or teach-back, and feedback. If `assisted-slice` is selected, assistance is limited to the exact confirmed blocker or slice after the learner has tried or asked for help; explain every generated change.
+
+Use `scripts/lesson_plan.py` to create the complete roadmap and current lesson contract. It is read-only unless `--write` is supplied:
+
+```bash
+python3 scripts/lesson_plan.py --brief-file /path/to/brief.json --learner-profile-file /path/to/profile.json --mode guided-lesson
+python3 scripts/lesson_plan.py --brief-file /path/to/brief.json --mode guided-lesson --stage 1 --write
+```
+
+Keep the roadmap visible, but keep future lessons locked. A lesson is not complete because code exists; it is complete when the learner can explain the concept, show evidence that the slice works, and describe the important decision or trade-off.
+
 ## Design a project from scratch
 
-When the learner selects **build from scratch**, ask for destination before accepting a brief. Capture the problem, audience, primary outcome, constraints, intended stack, and primary user journey. Generate a portable low-fidelity Markdown wireframe even when a visual tool is available. Use `scripts/ui_design.py <brief.json> --mode portable --write` only after the learner has approved `.upstack/` persistence or the requested artifact destination.
+When the learner selects **build from scratch**, ask for destination before accepting a brief. Capture the problem, audience, primary outcome, constraints, intended stack, and primary user journey. Generate a portable low-fidelity Markdown wireframe even when a visual tool is available. Then ask for the fresh-start lesson mode, defaulting to `guided-lesson`; UI design is the design portion of the first lessons, not permission to generate the entire interface. Use `scripts/ui_design.py <brief.json> --mode portable --write` only after the learner has approved `.upstack/` persistence or the requested artifact destination.
 
 If the current host exposes a verified callable Stitch MCP and the learner chooses it, use the host’s native MCP tool directly rather than printing a pretend design result. Before any remote write, state the provider, exact tool action, project/screen destination, and sanitized data that will be sent, then obtain explicit confirmation. Use only the tools and schema exposed by that MCP. After a design is selected, copy its approved user-flow and design decisions into local `DESIGN.md`; do not make the remote canvas the only source of truth. If Stitch is unavailable, unauthorized, or declined, continue with the Markdown wireframe and design contract.
 
