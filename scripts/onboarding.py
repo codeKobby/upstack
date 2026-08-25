@@ -108,6 +108,7 @@ def context(path: Path) -> dict[str, Any]:
             "completed_stages": persisted.get("completed_stages", []),
             "last_action": persisted.get("last_action"),
             "next_action": persisted.get("next_action"),
+            "active_directive": persisted.get("active_directive"),
             "updated_at": persisted.get("updated_at"),
         } if persisted else None,
         "provenance": "read-only path, marker, and optional Upstack-state inspection; no project code executed",

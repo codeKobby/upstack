@@ -20,6 +20,8 @@ Before running any Upstack command, use `scripts/project_state.py . --command <s
 
 A project identity is local to its canonical root. Keep `.upstack/PROJECT.json`, `.upstack/STATE.json`, `STATE.md`, `PRODUCT_BRIEF.md`, the lesson plan, attempts, evidence, and pending confirmations together. Do not create a global registry or silently write state outside the learner-confirmed project destination.
 
+Treat a correction in the active chat as a live-session change request. Pause the stale route, preserve valid answers and progress, prepare `scripts/session_handoff.py`, obtain native confirmation before persisting the directive when required, apply it, rerun the project-state gate, and resume the corrected command. Never restart the initial intent question, discard the curriculum, or claim persistence without state-file evidence. Store approved directives in `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md`.
+
 ## Learner ownership
 
 Use `scripts/onboarding.py` and `references/onboarding.md` to plan the question flow in this order: intent, outcome detail; for interview preparation, job requirements and self-assessment/diagnostic; then project mode, destination, project brief or source, optional UI-design path, focus, time budget, relevant skill confidence, and guidance mode.

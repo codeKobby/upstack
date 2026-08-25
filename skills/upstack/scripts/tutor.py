@@ -98,6 +98,7 @@ def initialize_project(
     workspace: str | Path | None = None,
     mode: str = "guided-lesson",
     onboarding_answers: dict[str, Any] | None = None,
+    active_directive: dict[str, Any] | None = None,
     confirm: bool = False,
 ) -> dict[str, Any]:
     target = Path(destination).expanduser()
@@ -143,8 +144,9 @@ def initialize_project(
         "current_stage": 1,
         "completed_stages": [],
         "attempts": [],
-        "last_action": "initialized",
-        "next_action": "resume_current_lesson",
+        "last_action": "initialized_with_live_directive" if active_directive else "initialized",
+        "next_action": (active_directive or {}).get("resume_command") or "resume_current_lesson",
+        "active_directive": active_directive,
         "pending_confirmation": None,
         "progression_gate": plan["progression_gate"],
     }
@@ -235,6 +237,7 @@ def main() -> int:
     init.add_argument("--learner-profile-file", type=Path)
     init.add_argument("--mode", choices=["guided-lesson", "blueprint-then-lessons", "attempt-first", "assisted-slice"], default="guided-lesson")
     init.add_argument("--answers-file", type=Path, help="JSON containing normalized onboarding answers")
+    init.add_argument("--directive-file", type=Path, help="JSON containing an approved live-session directive to carry into state")
     init.add_argument("--confirm", action="store_true", help="confirm local folder and .upstack writes")
 
     status = sub.add_parser("status", help="show persisted project and lesson status")
@@ -257,7 +260,7 @@ def main() -> int:
 
     args = parser.parse_args()
     if args.command == "init":
-        result = initialize_project(args.destination, _load_json(args.brief_file, {}), _load_json(args.learner_profile_file, {}), workspace=args.workspace, mode=args.mode, onboarding_answers=_load_json(args.answers_file, {}), confirm=args.confirm)
+        result = initialize_project(args.destination, _load_json(args.brief_file, {}), _load_json(args.learner_profile_file, {}), workspace=args.workspace, mode=args.mode, onboarding_answers=_load_json(args.answers_file, {}), active_directive=_load_json(args.directive_file, {}), confirm=args.confirm)
     elif args.command == "status":
         state, plan, paths = load_project(args.destination)
         result = {"status": "active", "curriculum": plan.get("curriculum"), "state": state, "stage_count": len(plan["stages"]), "state_file": str(paths["state"]), "resume": True, "write_performed": False}

@@ -137,6 +137,7 @@ def command_gate(start: str | Path, command: str) -> dict[str, Any]:
         "state_path": str(paths["state"]),
         "project_id": state.get("project_id") or (project or {}).get("project_id") or project_id(root),
         "project": project or state.get("project", {}),
+        "active_directive": state.get("active_directive"),
         "state": {
             "onboarding": state.get("onboarding", {}),
             "mode": state.get("mode"),
@@ -144,6 +145,7 @@ def command_gate(start: str | Path, command: str) -> dict[str, Any]:
             "completed_stages": state.get("completed_stages", []),
             "last_action": state.get("last_action"),
             "pending_confirmation": state.get("pending_confirmation"),
+            "active_directive": state.get("active_directive"),
             "updated_at": state.get("updated_at"),
         },
     })

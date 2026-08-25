@@ -27,6 +27,7 @@ INTERVIEW_PREP = ROOT / "scripts" / "interview_prep.py"
 LESSON_PLAN = ROOT / "scripts" / "lesson_plan.py"
 PROJECT_STATE = ROOT / "scripts" / "project_state.py"
 TUTOR = ROOT / "scripts" / "tutor.py"
+SESSION_HANDOFF = ROOT / "scripts" / "session_handoff.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -386,7 +387,7 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.7.0")
+        self.assertEqual(matrix["version"], "1.8.0")
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
         self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
@@ -527,7 +528,7 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue(known["resume_required"])
             self.assertEqual(known["state"]["current_stage"], 2)
             self.assertEqual(known["project_id"], "local-test-id")
-            for command in ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status"]:
+            for command in ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update"]:
                 gated = module.command_gate(root / "src", command)
                 self.assertEqual(gated["status"], "known_project", command)
                 self.assertTrue(gated["resume_required"], command)
@@ -545,6 +546,50 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue(context["known_upstack_project"])
             self.assertEqual(context["persisted_state"]["current_stage"], 3)
             self.assertEqual(context["persisted_state"]["next_action"], "resume_current_lesson")
+
+    def test_live_session_handoff_requires_confirmation_and_preserves_project_progress(self):
+        module = load_module("upstack_session_handoff", SESSION_HANDOFF)
+        state_module = load_module("upstack_session_handoff_state", PROJECT_STATE)
+        tutor = load_module("upstack_session_handoff_tutor", TUTOR)
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            destination = workspace / "agent-flow"
+            brief = {"name": "Agent Flow", "problem": "Learn orchestration by building slices."}
+            tutor.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, onboarding_answers={"goal": "skill-upgrade", "project_mode": "scratch"}, confirm=True)
+            request = {"reason": "Learner clarified that the project must be lesson-led and curriculum-first.", "changes": {"project_mode": "scratch", "teaching_mode": "guided-lesson", "lesson_generation": "explicit-identifier-only"}, "resume_command": "resume_current_curriculum"}
+            prepared = module.prepare_handoff(destination, request)
+            self.assertEqual(prepared["status"], "confirmation_required")
+            self.assertFalse(prepared["write_performed"])
+            self.assertFalse((destination / ".upstack" / "SESSION_HANDOFF.json").exists())
+            not_confirmed = module.apply_handoff(destination, request, confirm=False)
+            self.assertEqual(not_confirmed["status"], "confirmation_required")
+            applied = module.apply_handoff(destination, request, confirm=True)
+            self.assertEqual(applied["status"], "applied")
+            self.assertTrue(applied["write_performed"])
+            self.assertTrue((destination / ".upstack" / "SESSION_HANDOFF.json").exists())
+            self.assertTrue((destination / ".upstack" / "SESSION_HANDOFF.md").exists())
+            self.assertEqual(applied["state"]["active_directive"]["changes"]["teaching_mode"], "guided-lesson")
+            self.assertEqual(applied["state"]["next_action"], "resume_current_curriculum")
+            gate = state_module.command_gate(destination, "lesson")
+            self.assertEqual(gate["status"], "known_project")
+            self.assertEqual(gate["active_directive"]["request_id"], applied["request"]["request_id"])
+
+    def test_live_session_handoff_without_state_stays_session_only(self):
+        module = load_module("upstack_session_handoff_draft", SESSION_HANDOFF)
+        with tempfile.TemporaryDirectory() as directory:
+            result = module.prepare_handoff(Path(directory), {"changes": {"teaching_mode": "guided-lesson"}})
+            self.assertEqual(result["status"], "session_only_pending")
+            self.assertFalse(result["write_performed"])
+            self.assertFalse((Path(directory) / ".upstack").exists())
+            tutor = load_module("upstack_session_handoff_draft_tutor", TUTOR)
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            destination = workspace / "new-project"
+            directive = result["request"]
+            created = tutor.initialize_project(destination, {"name": "New Project", "problem": "Learn by building."}, {}, workspace=workspace, active_directive=directive, confirm=True)
+            self.assertEqual(created["state"]["last_action"], "initialized_with_live_directive")
+            self.assertEqual(created["state"]["active_directive"]["request_id"], directive["request_id"])
 
     def test_project_state_gate_rejects_ambiguous_broad_workspace(self):
         module = load_module("upstack_project_state_broad", PROJECT_STATE)

@@ -41,6 +41,7 @@ Every host should preserve `/upstack` or its equivalent explicit skill command. 
 | Architecture diagrams | Host-supported rendering or optional diagram MCP | Markdown/text map |
 | Fresh-start lessons | `lesson_plan.py` with guided-lesson default and evidence-gated progression | Portable Markdown roadmap and current lesson |
 | Project continuity | `project_state.py` plus `.upstack/PROJECT.json` and `.upstack/STATE.json` | Explicit path selection and resumable local state |
+| Live-session handoff | `session_handoff.py` plus `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md` | Pause stale route, confirm correction, resume without restarting |
 | Job-role research | `interview_prep.py` with user-provided job requirements, learner profile, and read-only web research | Explicit skill requirements with uncertainty labels |
 | Video follow-along map | `video_evidence.py` with approved metadata, chapters, or reviewed markers | Canonical video URL with metadata-only status |
 
@@ -65,6 +66,7 @@ Hosts must preserve the following boundaries:
 - When a VS Code host is detected, run `scripts/install_video_companion.py --host HOST_ID --json` before offering installation. If it reports `ready_for_confirmation`, ask one explicit native confirmation question containing the exact source and command; run with `--confirm` only after approval. Unknown hosts, declined prompts, missing VSIX files, and unavailable launchers retain the portable Markdown/JSON path.
 - Fresh starts are lesson-led by default: teach one concept, require a learner attempt and approved verification, review and explain, then unlock the next stage. Do not generate all lessons or the meaningful feature before the learner attempts it. Minimal scaffolding and assisted slices require explicit confirmation and remain reviewable.
 - Every Upstack command passes through project resolution. Known projects resume `.upstack/STATE.json`; projects without state route through onboarding; broad workspaces require an explicit project path. A new command must never restart a second curriculum or silently select a child project.
+- A correction in an active chat pauses the stale route. Preserve valid answers and progress, obtain native confirmation before persistence when required, apply `session_handoff.py`, rerun project resolution, and continue the corrected command. Never discard the current curriculum or claim a handoff was persisted without file evidence.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.
 - Upstack and Overflow keep separate state directories and exchange only compact context payloads.
 

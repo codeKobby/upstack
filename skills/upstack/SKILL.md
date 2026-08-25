@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.7.0"
+  version: "1.8.0"
   package: upstack
 ---
 
@@ -46,6 +46,26 @@ For public discovery, say:
 If the selected stateful workflow has no `.upstack/` state, do not stop with a generic initialization menu. Announce the next user-facing action, complete the relevant onboarding questions, show the draft inventory and first blueprint summary, and ask once before creating `.upstack/`. Preserve the original request and continue it after that confirmation. When `.upstack/STATE.json` exists, treat the project as known: show the persisted project name, project ID, onboarding status, mode, current stage, completed evidence, pending confirmation, and next action, then resume the requested command. Stateless previews and read-only discovery can continue without persistent state.
 
 Use `.upstack/` for Upstack state. Do not create, modify, or delete it without the learner’s confirmation. A destination selection or resolved-path confirmation is not permission to scaffold, clone, install, execute, create a branch/worktree, or publish; request those side-effect confirmations separately.
+
+## Live-session corrections and handoff
+
+Treat a learner correction in the active chat as a **live-session change request**, not as a new first-run prompt. Examples include: “I meant build from scratch,” “do not build it for me; teach me,” “the brief is unclear,” “use day two,” “I need the curriculum first,” or “this is the wrong project.” Immediately pause the stale route. Do not continue its next question, discard prior answers, restart the initial intent question, or begin implementation under the old assumptions.
+
+Normalize the correction into a small directive containing the reason, changed decisions, facts and answers to preserve, the command or lesson to resume, and any confirmation required. For a known project, run:
+
+```bash
+python3 scripts/session_handoff.py prepare --destination /path/to/project --request-file /path/to/change.json
+```
+
+Treat the result as controller data. Invoke the host’s callable native confirmation question with only the user-facing confirmation payload; do not print the JSON or simulate the confirmation. After approval, apply it:
+
+```bash
+python3 scripts/session_handoff.py apply --destination /path/to/project --request-file /path/to/change.json --confirm
+```
+
+Then run the shared project-state gate again, load `.upstack/STATE.json`, and resume the corrected command or lesson. The handoff writes `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md`, records `active_directive`, preserves the project identity, onboarding answers, curriculum, current stage, and learner evidence, and sets the next action to the requested continuation. If the project has not yet been initialized, keep the directive in the active session draft and include it when initialization is confirmed.
+
+If no confirmation is required because the learner is correcting only the current conversational route, still acknowledge the correction, replace the stale plan, and continue from the latest valid answer. Do not claim that a change was persisted unless the state files or host session provide evidence.
 
 ## Curriculum-first lesson requests
 
@@ -93,6 +113,7 @@ Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explici
 | `/upstack portfolio` | Generate portfolio documentation from observed learner work only. |
 | `/upstack status` | Pass through the shared project gate, then show active project, focus, stage, evidence, uncertainty, and next action. |
 | `/upstack project` | Resolve the current project identity and show whether Upstack onboarding/state exists. |
+| `/upstack update` | Prepare and apply a confirmed live-session correction without restarting onboarding or losing project state. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 
 Present meaningful choices by **actually invoking** the host’s native question tool when it is callable, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. A returned `next_question` or `question_plan` is an instruction to make that tool call, not user-facing content. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable. Keep action choices and object choices separate: never show an action menu and a candidate-number menu in the same turn, and interpret numeric replies only within the active question.
@@ -113,6 +134,8 @@ Create `.upstack/` lazily with:
 ├── PROJECT.json
 ├── STATE.json
 ├── STATE.md
+├── SESSION_HANDOFF.json
+├── SESSION_HANDOFF.md
 ├── PRODUCT_BRIEF.md
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md

@@ -57,6 +57,7 @@ Upstack announces what it will do, why that route fits, and what happens next. I
 | `/upstack portfolio` | Produce evidence-backed project and resume documentation. |
 | `/upstack status` | Resolve the current project, then show focus, stage, evidence, uncertainty, and next action. |
 | `/upstack project` | Resolve the current project identity and report whether onboarding/state exists. |
+| `/upstack update` | Apply a confirmed live-session correction without restarting onboarding or losing progress. |
 | `/upstack capabilities` | Check Git, GitHub CLI, authentication, public API fallback, and optional integration availability. |
 | `/upstack onboarding` | Show the next relevant first-run question without writing project state. |
 
@@ -72,6 +73,19 @@ The agent should **invoke** a callable native question tool or selectable prompt
 
 Some coding agents provide a native question UI that can collect multiple questions before submission. Upstack uses that capability as an optional portable optimization for a short safe chain of answer-independent questions, such as focus followed by time budget. It does not chain intent into source selection, dependent outcome questions, focus into skill calibration, discovery actions into candidate selection, or any external-action approval. After answers are submitted, Upstack recomputes the next dependent question set. If chaining is unavailable or uncertain, it falls back to one question per call. OpenCode is one known example, but the workflow is not OpenCode-specific.
 
+## Live-session changes
+
+If the learner corrects the route while a session is running—for example, “I meant build from scratch,” “teach me instead of building it,” “the brief is unclear,” or “use day two”—Upstack pauses the stale route instead of asking its next stale question. It preserves valid answers and progress, prepares a small change directive, asks for confirmation when persistence or an external/write action is involved, and resumes the corrected command.
+
+For a known project, the handoff controller is:
+
+```bash
+python3 scripts/session_handoff.py prepare --destination /path/to/project --request-file /path/to/change.json
+python3 scripts/session_handoff.py apply --destination /path/to/project --request-file /path/to/change.json --confirm
+```
+
+The applied directive is recorded in `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md`, while `.upstack/STATE.json` retains `active_directive`, the current stage, completed evidence, and the next action. The running agent must rerun the shared project gate after applying the change and must not restart onboarding or create a second curriculum. If the project has not yet been initialized, the directive remains in the active session draft until initialization is confirmed.
+
 ## Project-aware commands
 
 Every Upstack command uses the same project-resolution gate before command-specific work:
@@ -80,7 +94,7 @@ Every Upstack command uses the same project-resolution gate before command-speci
 python3 scripts/project_state.py . --command <subcommand>
 ```
 
-If the result is `known_project`, Upstack loads `.upstack/PROJECT.json` and `.upstack/STATE.json`, shows or uses the persisted project identity, onboarding status, mode, current lesson/stage, completed evidence, pending confirmation, and next action, then resumes. If the result is `onboarding_required`, Upstack preserves the requested command and routes through onboarding instead of starting a second curriculum. If the result is `project_selection_required`, it asks for an explicit project path and never chooses a child of a broad workspace implicitly. This gate applies to `/upstack`, `/upstack build`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, `/upstack portfolio`, `/upstack status`, and the other project commands.
+If the result is `known_project`, Upstack loads `.upstack/PROJECT.json` and `.upstack/STATE.json`, shows or uses the persisted project identity, onboarding status, mode, current lesson/stage, completed evidence, pending confirmation, and next action, then resumes. If the result is `onboarding_required`, Upstack preserves the requested command and routes through onboarding instead of starting a second curriculum. If the result is `project_selection_required`, it asks for an explicit project path and never chooses a child of a broad workspace implicitly. This gate applies to `/upstack`, `/upstack build`, `/upstack curriculum`, `/upstack lesson`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, `/upstack portfolio`, `/upstack project`, `/upstack status`, `/upstack update`, and the other project commands.
 
 A confirmed project stores its local identity and continuity record under `.upstack/PROJECT.json` and `.upstack/STATE.json`. The tutor can initialize, resume, show status, record evidence, and unlock the next stage only when the evidence gate is complete:
 
@@ -102,6 +116,8 @@ A local initialization creates a learner-owned `.upstack/` directory:
 ├── PROJECT.json
 ├── STATE.json
 ├── STATE.md
+├── SESSION_HANDOFF.json
+├── SESSION_HANDOFF.md
 ├── PRODUCT_BRIEF.md
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md

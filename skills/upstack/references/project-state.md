@@ -29,6 +29,8 @@ A confirmed initialization writes:
 .upstack/PROJECT.json       local project identity
 .upstack/STATE.json         onboarding, mode, stage, evidence, next action
 .upstack/STATE.md           concise human-readable status
+.upstack/SESSION_HANDOFF.json approved live-chat change directive
+.upstack/SESSION_HANDOFF.md   human-readable handoff and continuation record
 .upstack/PRODUCT_BRIEF.md   learner-approved product contract
 .upstack/lessons/plan.json  complete curriculum with current and locked stages
 .upstack/lessons/CURRICULUM.md
@@ -49,3 +51,5 @@ State is written only after explicit confirmation or an explicit write command. 
 | `intent_required` | Ask the context-independent intent question before inspecting workspace contents. |
 
 The curriculum is addressed by stable identifiers only after the project is resolved. `/upstack curriculum` shows IDs and lock status without generating lesson content. `/upstack lesson 3`, `/upstack lesson day-two`, `/upstack lesson stage-03-vertical-slice`, `/upstack lesson <title>`, and `/upstack lesson upstack-fresh-start-core` resolve against that project’s `plan.json`. If an identifier is ambiguous or locked, report candidates or the unlock condition instead of teaching it early. `/upstack build`, `/upstack hint`, `/upstack assess`, `/upstack blueprint`, and `/upstack portfolio` must use the same gate.
+
+When the learner corrects the active route in chat, treat the correction as a live-session change. Pause the stale plan, preserve valid answers and progress, prepare a small directive, obtain confirmation if persistence or side effects are involved, apply it through `scripts/session_handoff.py`, and then rerun the shared gate before resuming. Never silently continue with the stale route or restart onboarding.
