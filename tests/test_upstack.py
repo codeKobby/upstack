@@ -28,6 +28,7 @@ LESSON_PLAN = ROOT / "scripts" / "lesson_plan.py"
 PROJECT_STATE = ROOT / "scripts" / "project_state.py"
 TUTOR = ROOT / "scripts" / "tutor.py"
 SESSION_HANDOFF = ROOT / "scripts" / "session_handoff.py"
+PACKAGE_MANAGER = ROOT / "scripts" / "package_manager.py"
 VSCODE_EXTENSION = ROOT / "vscode-extension"
 
 
@@ -46,7 +47,8 @@ class UpstackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "README.md").write_text("# Demo\n\n## Install\n\n## Tests\n", encoding="utf-8")
-            (root / "package.json").write_text(json.dumps({"name": "demo", "scripts": {"test": "vitest"}, "dependencies": {"react": "latest"}}), encoding="utf-8")
+            (root / "package.json").write_text(json.dumps({"name": "demo", "packageManager": "pnpm@10.0.0", "scripts": {"test": "vitest"}, "dependencies": {"react": "latest"}}), encoding="utf-8")
+            (root / "pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n", encoding="utf-8")
             (root / "src").mkdir()
             (root / "src" / "main.tsx").write_text("export const App = () => null;\n", encoding="utf-8")
             (root / "tests").mkdir()
@@ -58,6 +60,8 @@ class UpstackTests(unittest.TestCase):
             self.assertEqual(report["languages"][0]["name"], "TypeScript/TSX")
             self.assertTrue(report["readme"]["present"])
             self.assertTrue(report["signals"]["has_tests"])
+            self.assertEqual(report["package_manager"]["detected"], "pnpm")
+            self.assertEqual(report["package_manager"]["status"], "detected")
             self.assertNotIn("node_modules/ignored.js", report["source_files"])
 
     def test_discovery_enriches_metadata_with_readme_and_targeted_root_files(self):
@@ -387,7 +391,7 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn("native-host-capability-is-verified", matrix["question_policy"]["multi_question"])
         self.assertIn("HOST_ID", matrix["question_policy"]["planner"])
         self.assertEqual(matrix["hosts"][0]["id"], "claude-code")
-        self.assertEqual(matrix["version"], "1.8.0")
+        self.assertEqual(matrix["version"], "1.9.0")
         self.assertIn(".upstack/design/WIREFRAME.md", matrix["design_policy"]["portable_artifacts"])
         self.assertEqual(matrix["design_policy"]["stitch"], "offer-only-when-verified-callable")
         self.assertEqual(matrix["design_policy"]["remote_writes"], "explicit-confirmation-required")
@@ -479,6 +483,8 @@ class OnboardingTests(unittest.TestCase):
         answers["ui_design"] = "portable"
         self.assertEqual(module.next_question(report, answers)["id"], "fresh_start_mode")
         answers["fresh_start_mode"] = "guided-lesson"
+        self.assertEqual(module.next_question(report, answers)["id"], "package_manager")
+        answers["package_manager"] = "pnpm"
         self.assertEqual(module.next_question(report, answers)["id"], "focus")
 
     def test_fresh_start_lesson_plan_maps_curriculum_and_requires_learner_evidence(self):
@@ -507,6 +513,48 @@ class OnboardingTests(unittest.TestCase):
             self.assertTrue(Path(written["blueprint"]).exists())
             self.assertTrue(Path(written["current_lesson"]).exists())
             self.assertTrue(Path(written["progress"]).exists())
+
+    def test_package_manager_resolver_prefers_pnpm_for_new_projects_and_detects_conflicts(self):
+        module = load_module("upstack_package_manager", PACKAGE_MANAGER)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "package.json").write_text(json.dumps({"name": "demo"}), encoding="utf-8")
+            new_plan = module.plan(root, new_project=True)
+            self.assertEqual(new_plan["status"], "choice_required")
+            self.assertEqual(new_plan["recommended"], "pnpm")
+            self.assertIn("pnpm install", new_plan["commands"]["install"])
+            (root / "package-lock.json").write_text("{}", encoding="utf-8")
+            (root / "pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n", encoding="utf-8")
+            conflict = module.plan(root)
+            self.assertEqual(conflict["status"], "choice_required")
+            self.assertEqual(conflict["detected"], None)
+            self.assertEqual(set(conflict["managers"]), {"pnpm", "npm"})
+
+    def test_onboarding_asks_existing_manager_then_migration_confirmation(self):
+        module = load_module("upstack_onboarding_package_manager", ROOT / "scripts" / "onboarding.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "package.json").write_text(json.dumps({"name": "existing", "packageManager": "npm@11.0.0"}), encoding="utf-8")
+            (root / "package-lock.json").write_text("{}", encoding="utf-8")
+            answers = {"goal": "understand", "outcome_detail": "architecture", "project_mode": "study", "destination": "source-adjacent", "source": "current"}
+            first = module.next_question(module.context(root), answers)
+            self.assertEqual(first["id"], "package_manager")
+            answers["package_manager"] = "pnpm"
+            migration = module.next_question(module.context(root), answers)
+            self.assertEqual(migration["id"], "package_manager_migration_confirmation")
+            self.assertIn("npm", migration["text"])
+            self.assertIn("pnpm", migration["text"])
+
+    def test_package_manager_migration_requires_separate_confirmation(self):
+        module = load_module("upstack_package_manager_migration", PACKAGE_MANAGER)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "package.json").write_text(json.dumps({"packageManager": "npm@11.0.0"}), encoding="utf-8")
+            (root / "package-lock.json").write_text("{}", encoding="utf-8")
+            migration = module.plan(root, selected="pnpm")
+            self.assertEqual(migration["status"], "migration_confirmation_required")
+            self.assertTrue(migration["migration"])
+            self.assertIn("delete-lockfile-without-confirmation", migration["must_not"])
 
     def test_project_state_gate_requires_onboarding_for_unknown_project_and_resumes_known_project(self):
         module = load_module("upstack_project_state", PROJECT_STATE)
@@ -609,11 +657,13 @@ class OnboardingTests(unittest.TestCase):
             brief = {"name": "Agent Flow", "problem": "Teach orchestration through a usable project."}
             needs_confirmation = module.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, confirm=False)
             self.assertEqual(needs_confirmation["status"], "confirmation_required")
-            created = module.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, confirm=True)
+            created = module.initialize_project(destination, brief, {"level": "new"}, workspace=workspace, onboarding_answers={"project_mode": "scratch", "package_manager": "pnpm"}, confirm=True)
             self.assertEqual(created["status"], "initialized")
             self.assertTrue((destination / ".upstack" / "PROJECT.json").exists())
             self.assertTrue((destination / ".upstack" / "STATE.json").exists())
             self.assertTrue((destination / ".upstack" / "lessons" / "CURRICULUM.md").exists())
+            self.assertTrue((destination / ".upstack" / "PACKAGE_MANAGER.md").exists())
+            self.assertEqual(created["state"]["package_manager"], "pnpm")
             self.assertFalse((destination / ".upstack" / "lessons" / "CURRENT_LESSON.md").exists())
             self.assertEqual(created["state"]["current_stage"], 1)
             resumed = module.resume_project(destination)

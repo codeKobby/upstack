@@ -32,6 +32,7 @@ A confirmed initialization writes:
 .upstack/SESSION_HANDOFF.json approved live-chat change directive
 .upstack/SESSION_HANDOFF.md   human-readable handoff and continuation record
 .upstack/PRODUCT_BRIEF.md   learner-approved product contract
+.upstack/PACKAGE_MANAGER.md selected/detected package-manager contract
 .upstack/lessons/plan.json  complete curriculum with current and locked stages
 .upstack/lessons/CURRICULUM.md
 .upstack/lessons/LESSON_BLUEPRINT.md
@@ -39,7 +40,7 @@ A confirmed initialization writes:
 .upstack/lessons/progress.json
 ```
 
-State is written only after explicit confirmation or an explicit write command. The tutor records attempts without unlocking by default. To unlock a stage, the learner must provide an attempt, approved verification, an explanation or teach-back, and feedback. Incomplete evidence leaves the same stage active.
+State is written only after explicit confirmation or an explicit write command. The tutor records attempts without unlocking by default. To unlock a stage, the learner must provide an attempt, approved verification, an explanation or teach-back, and feedback. Incomplete evidence leaves the same stage active. The selected or detected package manager and its read-only evidence are persisted in `STATE.json` and `PACKAGE_MANAGER.md` so later commands and lessons use the same manager.
 
 ## Command behavior
 

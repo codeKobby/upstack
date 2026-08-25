@@ -15,6 +15,7 @@ from typing import Any
 
 from lesson_plan import build_plan, current_lesson, render_lesson, resolve_lesson, write_artifacts
 from onboarding import validate_destination
+from package_manager import plan as package_manager_plan
 from project_state import project_id, state_paths
 
 
@@ -75,6 +76,26 @@ def _render_product_brief(brief: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _render_package_manager(report: dict[str, Any]) -> str:
+    selected = report.get("selected") or report.get("detected") or report.get("recommended") or "pending learner choice"
+    lines = [
+        "# Package Manager Contract",
+        "",
+        f"- Selected or detected manager: **{selected}**",
+        f"- Status: **{report.get('status', 'unknown')}**",
+        f"- Detected: **{report.get('detected') or 'none'}**",
+        f"- Declared: **{report.get('declared') or 'none'}**",
+        f"- Lockfiles: **{', '.join(sum(report.get('lockfiles', {}).values(), [])) or 'none'}**",
+        f"- Recommendation for new JavaScript/TypeScript work: **{report.get('recommended') or report.get('recommended_for_new_js_ts') or 'not applicable'}**",
+        "",
+        report.get("reason", "No package-manager decision has been recorded."),
+        "",
+        "Installation, lockfile migration, and package scripts require explicit learner confirmation. Do not mix package-manager commands in one stage.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def _render_state_summary(state: dict[str, Any]) -> str:
     return "\n".join([
         "# Apprenticeship State",
@@ -119,6 +140,9 @@ def initialize_project(
     target = Path(validation["resolved_path"])
     target.mkdir(parents=True, exist_ok=True)
     profile = learner_profile or {}
+    answers = onboarding_answers or {}
+    selected_manager = answers.get("package_manager") if answers.get("package_manager") in {"pnpm", "npm", "bun", "yarn"} else None
+    package_report = package_manager_plan(target, selected=selected_manager, new_project=answers.get("project_mode") == "scratch")
     plan = build_plan(brief, profile, mode=mode)
     lesson_dir = paths["root"] / "lessons"
     written = write_artifacts(plan, lesson_dir, 1, include_current=False)
@@ -140,6 +164,8 @@ def initialize_project(
         "project": {"name": project_name, "destination": str(target)},
         "mode": mode,
         "learner_profile": profile,
+        "package_manager": package_report.get("selected") or answers.get("package_manager"),
+        "package_manager_plan": package_report,
         "onboarding": {"status": "initialized", "answers_persisted": True, "answers": onboarding_answers or {}},
         "current_stage": 1,
         "completed_stages": [],
@@ -154,8 +180,10 @@ def initialize_project(
     _write_json(paths["project"], project_record)
     _write_json(paths["state"], state)
     (paths["root"] / "PRODUCT_BRIEF.md").write_text(_render_product_brief(brief), encoding="utf-8")
+    package_file = paths["root"] / "PACKAGE_MANAGER.md"
+    package_file.write_text(_render_package_manager(package_report), encoding="utf-8")
     (paths["root"] / "STATE.md").write_text(_render_state_summary(state), encoding="utf-8")
-    return {"status": "initialized", "project": project_record, "state": state, "written_files": written | {"project": str(paths["project"]), "state": str(paths["state"]), "plan": str(paths["plan"]), "product_brief": str(paths["root"] / "PRODUCT_BRIEF.md")}, "write_performed": True}
+    return {"status": "initialized", "project": project_record, "state": state, "written_files": written | {"project": str(paths["project"]), "state": str(paths["state"]), "plan": str(paths["plan"]), "product_brief": str(paths["root"] / "PRODUCT_BRIEF.md"), "package_manager": str(package_file)}, "write_performed": True}
 
 
 def load_project(destination: str | Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Path]]:

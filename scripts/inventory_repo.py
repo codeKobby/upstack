@@ -10,6 +10,11 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+try:
+    from package_manager import detect as detect_package_manager
+except ImportError:
+    detect_package_manager = None
+
 
 IGNORE_DIRS = {
     ".git",
@@ -247,6 +252,7 @@ def inventory(root: Path) -> dict[str, Any]:
         "has_container": any(path.name in {"Dockerfile", "docker-compose.yml", "docker-compose.yaml"} for path in files),
         "has_environment_example": any(path.name in {".env.example", ".env.sample", "env.example"} for path in files),
     }
+    package_manager = detect_package_manager(root) if detect_package_manager else {"status": "unavailable", "provenance": "package_manager helper unavailable"}
     return {
         "version": 1,
         "root": str(root),
@@ -261,6 +267,7 @@ def inventory(root: Path) -> dict[str, Any]:
         "languages": [{"name": name, "files": count} for name, count in languages.most_common()],
         "extensions": [{"extension": extension or "[no extension]", "files": count} for extension, count in extension_counts.most_common(40)],
         "manifests": _manifest_report(root, files),
+        "package_manager": package_manager,
         "readme": _readme_report(root, files),
         "signals": signals,
         "source_files": source_files[:200],
@@ -283,7 +290,8 @@ def _markdown(report: dict[str, Any]) -> str:
         lines.append(f"| `{item['path']}` | {item['kind']} | {details} |")
     if not report["manifests"]["files"]:
         lines.append("| — | No recognized root manifest | Unknown |")
-    lines.extend(["", "## README signals", ""])
+    package_manager = report.get("package_manager", {})
+    lines.extend(["", "## Package manager", "", f"- Status: **{package_manager.get('status', 'unknown')}**", f"- Detected: **{package_manager.get('detected') or 'none'}**", f"- Declared: **{package_manager.get('declared') or 'none'}**", f"- Lockfiles: **{', '.join(sum(package_manager.get('lockfiles', {}).values(), [])) or 'none'}**", f"- New JavaScript/TypeScript recommendation: **{package_manager.get('recommended_for_new_js_ts') or 'not applicable'}**", "", "Package-manager evidence is read-only; installation and migration require separate learner confirmation.", "", "## README signals", ""])
     readme = report["readme"]
     if readme["present"]:
         lines.append(f"README: `{readme['files'][0]}` ({readme['characters']} characters; {readme['urls']} URLs).")

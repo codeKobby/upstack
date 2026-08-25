@@ -86,6 +86,20 @@ python3 scripts/session_handoff.py apply --destination /path/to/project --reques
 
 The applied directive is recorded in `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md`, while `.upstack/STATE.json` retains `active_directive`, the current stage, completed evidence, and the next action. The running agent must rerun the shared project gate after applying the change and must not restart onboarding or create a second curriculum. If the project has not yet been initialized, the directive remains in the active session draft until initialization is confirmed.
 
+## Package-manager-aware setup
+
+For a new JavaScript/TypeScript project, Upstack recommends **pnpm** and asks the learner to choose among pnpm, npm, Bun, Yarn, or another specified manager. The choice becomes part of the project contract and is used consistently in lessons.
+
+For an existing project, Upstack detects `package.json:packageManager` and root lockfiles such as `pnpm-lock.yaml`, `package-lock.json`, `bun.lock`/`bun.lockb`, and `yarn.lock`. It preserves the detected manager by default. Conflicting signals are surfaced for a learner decision rather than guessed.
+
+Use the read-only resolver:
+
+```bash
+python3 scripts/package_manager.py /path/to/project --json
+```
+
+Choosing a manager different from the detected one creates a separate migration-confirmation step. Upstack must show the affected lockfiles, package scripts, and exact install/run/exec commands before changing anything. It does not silently delete lockfiles, rewrite scripts, install dependencies, or mix package-manager commands in one lesson.
+
 ## Project-aware commands
 
 Every Upstack command uses the same project-resolution gate before command-specific work:
@@ -119,6 +133,7 @@ A local initialization creates a learner-owned `.upstack/` directory:
 ├── SESSION_HANDOFF.json
 ├── SESSION_HANDOFF.md
 ├── PRODUCT_BRIEF.md
+├── PACKAGE_MANAGER.md
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md
 ├── CONCEPT_MAP.md

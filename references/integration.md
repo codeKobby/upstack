@@ -75,9 +75,10 @@ Treat these as separate decisions:
 | Open a browser result | No for passive retrieval; ask before login or external submission. |
 | Clone a repository | Yes; show destination and disk impact. |
 | Fork a repository | Yes; show account/org, name, remote behavior, and asynchronous wait. |
-| Install dependencies | Yes; show exact command and package-manager scripts that may run. |
+| Install dependencies | Yes; show exact command, selected package manager, and package-manager scripts that may run. |
 | Execute tests/checks | Yes unless the learner already approved that exact documented check in the active stage. |
 | Create branch/worktree | Yes; show base, target, dirty paths, and isolation. |
+| Migrate package manager | Separate confirmation; show detected evidence, target manager, affected lockfiles/scripts, exact commands, and preservation or rollback plan. |
 | Commit/push/PR/merge/delete | Separate confirmation for each operation. |
 | Create portfolio repository or publish | Yes; show the content and destination first. |
 | Create or modify a remote Stitch project/screen/design system | Yes; show the provider, exact action, data to send, and resulting remote destination first. |

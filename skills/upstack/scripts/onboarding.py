@@ -13,6 +13,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+try:
+    from package_manager import plan as package_manager_plan
+except ImportError:
+    package_manager_plan = None
+
 
 PROJECT_MARKERS = {
     "package.json",
@@ -100,6 +105,7 @@ def context(path: Path) -> dict[str, Any]:
         "project_root": project,
         "local_candidates": _local_candidates(path),
         "state_path": str(Path(project) / ".upstack") if project else None,
+        "package_manager": package_manager_plan(project) if project and package_manager_plan else None,
         "known_upstack_project": bool(persisted),
         "persisted_state": {
             "project_id": persisted.get("project_id"),
@@ -412,6 +418,52 @@ def _design_question(ctx: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _package_manager_question(ctx: dict[str, Any], project_mode: str) -> dict[str, Any]:
+    observed = ctx.get("package_manager") or {}
+    detected = observed.get("detected")
+    conflict = observed.get("status") in {"conflict", "choice_required"}
+    if detected and observed.get("status") == "detected":
+        text = f"This project appears to use `{detected}`. Which package manager should Upstack use?"
+        why = f"The existing `{detected}` lockfile or manifest is the strongest local signal, so Upstack will preserve it unless you explicitly choose a migration."
+        labels = {
+            "pnpm": ("Use pnpm", "Use pnpm commands after migration is separately confirmed."),
+            "npm": ("Use npm", "Use npm commands and package-lock.json after migration is separately confirmed."),
+            "bun": ("Use Bun", "Use Bun commands and bun.lock after migration is separately confirmed."),
+            "yarn": ("Use Yarn", "Use Yarn commands and yarn.lock after migration is separately confirmed."),
+        }
+        options = [option(f"Keep {detected}", "Preserve the existing lockfile and package scripts.", detected)]
+        options.extend(option(*labels[manager], manager) for manager in ("pnpm", "npm", "bun", "yarn") if manager != detected)
+    else:
+        text = "Which package manager should this JavaScript/TypeScript project use?"
+        why = "For new JavaScript/TypeScript work, Upstack recommends pnpm, but the manager remains your decision and becomes part of the project contract."
+        if conflict:
+            text = "This project has conflicting package-manager signals. Which manager should be authoritative?"
+            why = "Multiple root signals were found; Upstack will not guess or delete a lockfile. Choose the authoritative manager before dependency work."
+        options = [
+            option("pnpm (recommended)", "Use pnpm commands after the project contract is confirmed.", "pnpm"),
+            option("npm", "Use npm commands and package-lock.json after any needed migration is separately confirmed.", "npm"),
+            option("Bun", "Use Bun commands and bun.lock after any needed migration is separately confirmed.", "bun"),
+            option("Yarn", "Use Yarn commands and yarn.lock after any needed migration is separately confirmed.", "yarn"),
+            option("Another manager", "Tell Upstack which package manager and version you require.", "other"),
+        ]
+    return question("package_manager", text, options, why=why, allow_freeform=True)
+
+
+def _package_manager_migration_question(ctx: dict[str, Any], selected: str) -> dict[str, Any]:
+    observed = ctx.get("package_manager") or {}
+    detected = observed.get("detected") or "the detected manager"
+    return question(
+        "package_manager_migration_confirmation",
+        f"Switch this project from `{detected}` to `{selected}`?",
+        [
+            option("Yes, plan the migration", "Show affected lockfiles, scripts, and install commands; no package command runs in this question.", "confirmed"),
+            option("Keep the existing manager", "Preserve the detected manager and its lockfile.", "keep-existing"),
+            option("Plan the migration later", "Keep the project unchanged for now and record the migration as a separate decision.", "later"),
+        ],
+        why="Changing package managers can rewrite lockfiles and install behavior, so it requires a separate explicit decision.",
+    )
+
+
 def _fresh_start_mode_question() -> dict[str, Any]:
     return question(
         "fresh_start_mode",
@@ -550,6 +602,26 @@ def next_question(ctx: dict[str, Any] | None, answers: dict[str, Any]) -> dict[s
 
     if project_mode == "scratch" and not answers.get("fresh_start_mode"):
         return _fresh_start_mode_question()
+
+    package_context = ctx.get("package_manager") or {}
+    package_applicable = project_mode == "scratch" or package_context.get("applicable") or source in {"current", "local"}
+    if package_applicable and not answers.get("package_manager"):
+        return _package_manager_question(ctx, project_mode)
+
+    if answers.get("package_manager") == "other" and not answers.get("package_manager_detail"):
+        return question(
+            "package_manager_detail",
+            "Which package manager and version should this project use?",
+            [],
+            why="Upstack needs the exact manager name and version to keep install, script, and lockfile commands consistent.",
+            allow_freeform=True,
+        )
+
+    selected_manager = str(answers.get("package_manager", "")).lower()
+    if package_manager_plan and selected_manager in {"pnpm", "npm", "bun", "yarn"}:
+        manager_plan = package_manager_plan(ctx.get("project_root") or ctx.get("cwd", "."), selected=selected_manager, new_project=project_mode == "scratch")
+        if manager_plan.get("migration") and answers.get("package_manager_migration_confirmation") not in {"confirmed", "keep-existing", "later"}:
+            return _package_manager_migration_question(ctx, selected_manager)
 
     if project_mode in {"rebuild", "clone", "study"} and not answers.get("source"):
         return _source_question(ctx, goal, project_mode)

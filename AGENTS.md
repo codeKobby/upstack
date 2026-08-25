@@ -22,6 +22,8 @@ A project identity is local to its canonical root. Keep `.upstack/PROJECT.json`,
 
 Treat a correction in the active chat as a live-session change request. Pause the stale route, preserve valid answers and progress, prepare `scripts/session_handoff.py`, obtain native confirmation before persisting the directive when required, apply it, rerun the project-state gate, and resume the corrected command. Never restart the initial intent question, discard the curriculum, or claim persistence without state-file evidence. Store approved directives in `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md`.
 
+For JavaScript/TypeScript projects, run `scripts/package_manager.py` after the brief or source is known. Recommend pnpm for new projects, ask the learner to choose, and preserve a detected `package.json:packageManager` or lockfile manager for existing projects unless migration is explicitly selected and separately confirmed. Show exact affected files and commands before any install, lockfile rewrite, script change, or migration. Never mix manager commands in one stage.
+
 ## Learner ownership
 
 Use `scripts/onboarding.py` and `references/onboarding.md` to plan the question flow in this order: intent, outcome detail; for interview preparation, job requirements and self-assessment/diagnostic; then project mode, destination, project brief or source, optional UI-design path, focus, time budget, relevant skill confidence, and guidance mode.

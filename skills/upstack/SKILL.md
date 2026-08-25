@@ -4,7 +4,7 @@ description: Guide learners to reverse engineer, understand, rebuild, and ship s
 license: MIT
 metadata:
   author: codeKobby
-  version: "1.8.0"
+  version: "1.9.0"
   package: upstack
 ---
 
@@ -118,6 +118,14 @@ Use `scripts/tutor.py` for confirmed initialization, curriculum viewing, explici
 
 Present meaningful choices by **actually invoking** the host’s native question tool when it is callable, with one question, two to five options, concise descriptions, and a clearly labelled free-form option where needed. A returned `next_question` or `question_plan` is an instruction to make that tool call, not user-facing content. Otherwise show the same choices as numbered or lettered text. Never expose a question-tool schema or claim that a text list is clickable. Keep action choices and object choices separate: never show an action menu and a candidate-number menu in the same turn, and interpret numeric replies only within the active question.
 
+## Package-manager contract
+
+For JavaScript/TypeScript work, run `scripts/package_manager.py <path> --json` after the project brief or source is known. For a new project with no authoritative package-manager evidence, recommend **pnpm** and ask the learner to choose among pnpm, npm, Bun, Yarn, or another specified manager. For an existing project, treat `package.json:packageManager` and root lockfiles as observed evidence and preserve the detected manager by default.
+
+If the learner chooses a manager different from the detected one, stop before installation or file changes and ask a separate migration-confirmation question. Show the affected lockfiles, package scripts, and exact commands. Never delete or regenerate lockfiles, change package scripts, install dependencies, mix manager commands, or claim a migration before confirmation. Record the selected manager and decision in `.upstack/PACKAGE_MANAGER.md` and `.upstack/STATE.json`.
+
+Use manager-specific commands consistently in each lesson. The learner’s package-manager choice is part of the project contract, not a reason to restart onboarding.
+
 ## Initialize the project apprenticeship
 
 For a local repository, inspect first and write later. Use `scripts/inventory_repo.py <path> --json` or `--output .upstack/PROJECT_INVENTORY.md`. The helper is read-only and must not execute project code, install packages, load secrets, or modify files.
@@ -137,6 +145,7 @@ Create `.upstack/` lazily with:
 ├── SESSION_HANDOFF.json
 ├── SESSION_HANDOFF.md
 ├── PRODUCT_BRIEF.md
+├── PACKAGE_MANAGER.md
 ├── USER_PROFILE.md
 ├── PROJECT_INVENTORY.md
 ├── CONCEPT_MAP.md

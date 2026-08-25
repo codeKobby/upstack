@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "upstack",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "universal_install": "npx skills add codeKobby/upstack --all",
   "question_policy": {
     "default": "single-question",
@@ -27,6 +27,13 @@
     "unknown_project": "route-through-onboarding-before-project-command",
     "broad_workspace": "ask-for-explicit-project-path; never-select-child-implicitly",
     "commands": ["upstack", "init", "inventory", "concepts", "focus", "blueprint", "reverse", "build", "stage", "curriculum", "lesson", "hint", "assess", "discover", "choose", "source", "role", "portfolio", "status", "update"]
+  },
+  "package_manager_policy": {
+    "new_js_ts_default": "recommend-pnpm-then-ask",
+    "existing_project": "detect-packageManager-and-lockfiles-preserve-by-default",
+    "migration": "separate-confirmation-required",
+    "install": "exact-command-and-side-effect-confirmation-required",
+    "controller": "scripts/package_manager.py"
   },
   "live_session_policy": {
     "correction": "pause-stale-route-preserve-valid-answers",

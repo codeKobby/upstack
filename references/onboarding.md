@@ -27,6 +27,8 @@ After the intent answer, inspect only the context required by that route:
 - If code or artifacts will be local, what exact folder should hold them, and does its parent exist?
 - Is the selected source a local project, public project, or new-project brief?
 - If this is a fresh start, should Upstack guide the learner step by step, show the roadmap first, let the learner attempt first, or provide tightly bounded help after an attempt?
+- Which package manager should a JavaScript/TypeScript project use: pnpm (recommended for new work), npm, Bun, Yarn, or another specified manager?
+- If an existing manager is detected, should Upstack preserve it or plan a separately confirmed migration?
 - Is a local path inside a Git repository or a broad workspace?
 - Does the selected project contain recognizable project markers?
 - Does the selected project already contain `.upstack/` state?
@@ -84,13 +86,16 @@ Use this order, with conditional branches:
 | 10 | Which existing project should we use? | For rebuild, clone, or study mode when a source is not already selected. |
 | 11 | How should we design the user experience? | For a scratch project with a graphical interface; always offer portable Markdown and offer Stitch only when its MCP is verified callable. |
 | 12 | How should we teach while building from scratch? | For scratch mode; default to lesson-led guidance and keep meaningful implementation learner-authored. |
-| 13 | Where should we focus first? | After the project brief/source, design gate, and fresh-start lesson mode are known. |
-| 14 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
-| 15 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
-| 16 | How should Upstack guide you? | Before choosing scaffold and reveal depth for non-scratch routes. |
-| 17 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
+| 13 | Which package manager should we use? | For JavaScript/TypeScript projects; recommend pnpm for new work, preserve a detected manager by default, and ask separately before migration. |
+| 14 | Where should we focus first? | After the project brief/source, design gate, fresh-start lesson mode, and package-manager decision are known. |
+| 15 | How much time should the first stage fit into? | Before creating a staged blueprint or implementation slice. |
+| 16 | How comfortable are you with the relevant technologies/concepts? | After focus is known, using only the selected focus. |
+| 17 | How should Upstack guide you? | Before choosing scaffold and reveal depth for non-scratch routes. |
+| 18 | Should I save this plan in `.upstack/`? | After the draft inventory, design artifacts, and first blueprint summary are shown. |
 
 Destination and project mode are distinct decisions. Never infer “clone,” “rebuild,” or “build from scratch” from the current working directory, a repository URL, or a portfolio goal. When the learner starts in a home directory, editor workspace, or other broad folder, ask for the exact local destination path instead of writing into that broad folder or silently selecting one of its children. Resolve relative paths against the stated workspace, reject `/`, the home directory, the broad workspace itself when it has no project markers, files, and paths whose parent does not exist, then show the resolved path. A valid path still requires explicit destination confirmation before any write. A destination choice does not authorize cloning, forking, branch/worktree creation, publishing, or file writes; those remain separate confirmations.
+
+For JavaScript/TypeScript projects, run the read-only package-manager resolver after the source or brief is known. For a new project, recommend pnpm but ask the learner to choose. For an existing project, treat a lockfile or `package.json:packageManager` as observed evidence and preserve that manager unless the learner explicitly selects another. A different selection creates a separate migration-confirmation question; do not delete or regenerate lockfiles, change scripts, install dependencies, or mix manager commands before that confirmation.
 
 ## Complete curriculum, staged lessons
 
@@ -129,7 +134,7 @@ Ask project mode and destination before source discovery. For clone-and-adapt, a
 
 ### Build from scratch
 
-Ask for the destination category and exact local path before accepting a project brief. Build the complete curriculum map first, then ask for a brief and UI-design path. Always generate the portable Markdown brief, wireframe, and design contract as the local design gate. Offer a Stitch MCP path only when the current host exposes a verified callable Stitch capability; never auto-configure it or make it a prerequisite.
+Ask for the destination category and exact local path before accepting a project brief. Build the complete curriculum map first, then ask for a brief and UI-design path. For a JavaScript/TypeScript brief, ask for the package manager and recommend pnpm for a new project. Always generate the portable Markdown brief, wireframe, and design contract as the local design gate. Offer a Stitch MCP path only when the current host exposes a verified callable Stitch capability; never auto-configure it or make it a prerequisite.
 
 ## Persistence and resumption
 

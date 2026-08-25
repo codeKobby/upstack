@@ -41,6 +41,7 @@ Every host should preserve `/upstack` or its equivalent explicit skill command. 
 | Architecture diagrams | Host-supported rendering or optional diagram MCP | Markdown/text map |
 | Fresh-start lessons | `lesson_plan.py` with guided-lesson default and evidence-gated progression | Portable Markdown roadmap and current lesson |
 | Project continuity | `project_state.py` plus `.upstack/PROJECT.json` and `.upstack/STATE.json` | Explicit path selection and resumable local state |
+| Package management | `package_manager.py` plus `.upstack/PACKAGE_MANAGER.md` | Recommend pnpm for new JS/TS; preserve detected manager; confirm migrations |
 | Live-session handoff | `session_handoff.py` plus `.upstack/SESSION_HANDOFF.json` and `.upstack/SESSION_HANDOFF.md` | Pause stale route, confirm correction, resume without restarting |
 | Job-role research | `interview_prep.py` with user-provided job requirements, learner profile, and read-only web research | Explicit skill requirements with uncertainty labels |
 | Video follow-along map | `video_evidence.py` with approved metadata, chapters, or reviewed markers | Canonical video URL with metadata-only status |
@@ -67,6 +68,7 @@ Hosts must preserve the following boundaries:
 - Fresh starts are lesson-led by default: teach one concept, require a learner attempt and approved verification, review and explain, then unlock the next stage. Do not generate all lessons or the meaningful feature before the learner attempts it. Minimal scaffolding and assisted slices require explicit confirmation and remain reviewable.
 - Every Upstack command passes through project resolution. Known projects resume `.upstack/STATE.json`; projects without state route through onboarding; broad workspaces require an explicit project path. A new command must never restart a second curriculum or silently select a child project.
 - A correction in an active chat pauses the stale route. Preserve valid answers and progress, obtain native confirmation before persistence when required, apply `session_handoff.py`, rerun project resolution, and continue the corrected command. Never discard the current curriculum or claim a handoff was persisted without file evidence.
+- For JavaScript/TypeScript projects, detect `package.json:packageManager` and root lockfiles with `package_manager.py`. Recommend pnpm for new work, preserve an existing manager by default, and require a separate confirmation before changing lockfiles, scripts, or install commands.
 - Portfolio claims are generated only from observed learner work and clearly label inherited or adapted code.
 - Upstack and Overflow keep separate state directories and exchange only compact context payloads.
 
